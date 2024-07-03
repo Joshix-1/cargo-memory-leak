@@ -1,7 +1,10 @@
 use nannou::prelude::*;
 
 const GRID_WIDTH: u16 = 100;
-const GRID_HEIGHT: u16 = GRID_WIDTH;
+const GRID_HEIGHT: u16 = 125;
+
+type Row = [FieldType; GRID_WIDTH as usize];
+type Grid = [Row; GRID_HEIGHT as usize];
 
 fn main() {
     nannou::app(model).update(update).simple_window(view).run();
@@ -14,7 +17,7 @@ enum FieldType {
 }
 
 struct Model {
-    grid: [[FieldType; GRID_WIDTH as usize]; GRID_HEIGHT as usize],
+    grid: Grid,
 }
 
 impl Model {
@@ -31,7 +34,29 @@ fn model(_app: &App) -> Model {
     model
 }
 
-fn update(_app: &App, _model: &mut Model, _update: Update) {}
+fn update(_app: &App, _model: &mut Model, _update: Update) {
+    for y in 0..<usize as From<u16>>::from(GRID_HEIGHT) {
+        let y_below = y.checked_add(1);
+        for x in 0..<usize as From<u16>>::from(GRID_WIDTH) {
+            match _model.grid.get(y).unwrap().get(x).unwrap().clone() {
+                FieldType::Air => continue,
+                FieldType::Sand => {
+                    // sand can fall down
+                    let below: Option<&mut FieldType> = y_below
+                        .and_then(|y| _model.grid.get_mut(y))
+                        .and_then(|r| r.get_mut(x));
+
+                    if below != Some(&mut FieldType::Air) {
+                        continue;
+                    }
+                    *(below.unwrap()) = FieldType::Sand;
+
+                    *_model.grid.get_mut(y).unwrap().get_mut(x).unwrap() = FieldType::Air;
+                }
+            };
+        }
+    }
+}
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let window = app.main_window();
@@ -55,8 +80,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     );
 
     for y in 0..GRID_HEIGHT {
-        let row: &[FieldType; GRID_WIDTH as usize] =
-            model.grid.get(<usize as From<u16>>::from(y)).unwrap();
+        let row: &Row = model.grid.get(<usize as From<u16>>::from(y)).unwrap();
         for x in 0..GRID_WIDTH {
             let cell: &FieldType = row.get(<usize as From<u16>>::from(x)).unwrap();
 
