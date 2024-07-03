@@ -1,7 +1,8 @@
+use std::cell::Ref;
 use nannou::prelude::*;
 
-const GRID_WIDTH: u16 = 100;
-const GRID_HEIGHT: u16 = 125;
+const GRID_WIDTH: u16 = 125;
+const GRID_HEIGHT: u16 = 100;
 
 type Row = [FieldType; GRID_WIDTH as usize];
 type Grid = [Row; GRID_HEIGHT as usize];
@@ -28,48 +29,16 @@ impl Model {
     }
 }
 
-fn model(_app: &App) -> Model {
-    let mut model = Model::new();
-    model.grid[50][50] = FieldType::Sand;
-    model
-}
-
-fn update(_app: &App, _model: &mut Model, _update: Update) {
-    for y in 0..<usize as From<u16>>::from(GRID_HEIGHT) {
-        let y_below = y.checked_add(1);
-        for x in 0..<usize as From<u16>>::from(GRID_WIDTH) {
-            match _model.grid.get(y).unwrap().get(x).unwrap().clone() {
-                FieldType::Air => continue,
-                FieldType::Sand => {
-                    // sand can fall down
-                    let below: Option<&mut FieldType> = y_below
-                        .and_then(|y| _model.grid.get_mut(y))
-                        .and_then(|r| r.get_mut(x));
-
-                    if below != Some(&mut FieldType::Air) {
-                        continue;
-                    }
-                    *(below.unwrap()) = FieldType::Sand;
-
-                    *_model.grid.get_mut(y).unwrap().get_mut(x).unwrap() = FieldType::Air;
-                }
-            };
-        }
-    }
-}
-
-fn view(app: &App, model: &Model, frame: Frame) {
-    let window = app.main_window();
-    let draw = app.draw();
-
-    draw.background().color(DARKGRAY);
-
-    let min_dim = {
+fn get_cell_size_and_display_rect(window: Ref<Window>) -> (f32, Rect) {
+    let cell_size = {
         let (px_width, px_height) = window.inner_size_pixels();
-        px_width.min(px_height)
+
+        let max_cell_size_x = px_width / <u32 as From<u16>>::from(GRID_WIDTH);
+        let max_cell_size_y = px_height / <u32 as From<u16>>::from(GRID_HEIGHT);
+
+        max_cell_size_x.min(max_cell_size_y)
     };
 
-    let cell_size = min_dim / <u32 as From<u16>>::from(GRID_HEIGHT.max(GRID_WIDTH));
     let scale_factor = window.scale_factor();
 
     let cell_size = <f32 as NumCast>::from(cell_size).unwrap() / scale_factor;
@@ -78,6 +47,62 @@ fn view(app: &App, model: &Model, frame: Frame) {
         <f32 as From<u16>>::from(GRID_WIDTH) * cell_size,
         <f32 as From<u16>>::from(GRID_HEIGHT) * cell_size,
     );
+
+    (cell_size, display_rect)
+}
+
+fn model(_app: &App) -> Model {
+    Model::new()
+}
+
+fn update(app: &App, model: &mut Model, _update: Update) {
+    if app.mouse.buttons.left().is_down() {
+        let point = app.mouse.position();
+        let (cell_size, display_rect) = get_cell_size_and_display_rect(app.main_window());
+
+        if display_rect.contains(point) {
+            let x = ((point.x - display_rect.left()) / cell_size).floor();
+            let y = ((point.y - display_rect.top()) / cell_size).abs().floor();
+
+            let x: usize = x.to_usize().unwrap();
+            let y: usize = y.to_usize().unwrap();
+
+            let cell = model.grid.get_mut(y).and_then(|r| r.get_mut(x));
+            if let Some(value) = cell {
+                *value = FieldType::Sand;
+            }
+        }
+    }
+
+    for y in 0..<usize as From<u16>>::from(GRID_HEIGHT) {
+        let y_below = y.checked_add(1);
+        for x in 0..<usize as From<u16>>::from(GRID_WIDTH) {
+            match model.grid.get(y).unwrap().get(x).unwrap().clone() {
+                FieldType::Air => continue,
+                FieldType::Sand => {
+                    // sand can fall down
+                    let below: Option<&mut FieldType> = y_below
+                        .and_then(|y| model.grid.get_mut(y))
+                        .and_then(|r| r.get_mut(x));
+
+                    if below != Some(&mut FieldType::Air) {
+                        continue;
+                    }
+                    *(below.unwrap()) = FieldType::Sand;
+
+                    *model.grid.get_mut(y).unwrap().get_mut(x).unwrap() = FieldType::Air;
+                }
+            };
+        }
+    }
+}
+
+fn view(app: &App, model: &Model, frame: Frame) {
+    let draw = app.draw();
+
+    draw.background().color(DARKGRAY);
+
+    let (cell_size, display_rect) = get_cell_size_and_display_rect(app.main_window());
 
     for y in 0..GRID_HEIGHT {
         let row: &Row = model.grid.get(<usize as From<u16>>::from(y)).unwrap();
