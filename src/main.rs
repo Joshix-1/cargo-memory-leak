@@ -1,5 +1,5 @@
-use std::cell::Ref;
 use nannou::prelude::*;
+use std::cell::Ref;
 
 const GRID_WIDTH: u16 = 125;
 const GRID_HEIGHT: u16 = 100;
@@ -56,7 +56,14 @@ fn model(_app: &App) -> Model {
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
-    if app.mouse.buttons.left().is_down() {
+    let field_type_to_set: Option<FieldType> = if app.mouse.buttons.left().is_down() {
+        Some(FieldType::Sand)
+    } else if app.mouse.buttons.right().is_down() {
+        Some(FieldType::Air)
+    } else {
+        None
+    };
+    if let Some(field_type) = field_type_to_set {
         let point = app.mouse.position();
         let (cell_size, display_rect) = get_cell_size_and_display_rect(app.main_window());
 
@@ -69,7 +76,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
 
             let cell = model.grid.get_mut(y).and_then(|r| r.get_mut(x));
             if let Some(value) = cell {
-                *value = FieldType::Sand;
+                *value = field_type;
             }
         }
     }
