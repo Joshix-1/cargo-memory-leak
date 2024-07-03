@@ -81,7 +81,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         }
     }
 
-    for y in 0..<usize as From<u16>>::from(GRID_HEIGHT) {
+    for y in (0..<usize as From<u16>>::from(GRID_HEIGHT)).rev() {
         let y_below = y.checked_add(1);
         for x in 0..<usize as From<u16>>::from(GRID_WIDTH) {
             match model.grid.get(y).unwrap().get(x).unwrap().clone() {
