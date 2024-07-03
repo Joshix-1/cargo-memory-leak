@@ -88,16 +88,29 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 FieldType::Air => continue,
                 FieldType::Sand => {
                     // sand can fall down
-                    let below: Option<&mut FieldType> = y_below
-                        .and_then(|y| model.grid.get_mut(y))
-                        .and_then(|r| r.get_mut(x));
+                    let left_first = app.duration.since_start.as_micros() % 2 == 0;
 
-                    if below != Some(&mut FieldType::Air) {
-                        continue;
+                    let mut sand_has_fallen: bool = false;
+                    for m in [
+                        0isize,
+                        if left_first { -1 } else { 1 },
+                        if left_first { 1 } else { -1 },
+                    ]
+                    .into_iter()
+                    {
+                        let row_below: Option<&mut Row> =
+                            y_below.and_then(|y| model.grid.get_mut(y));
+                        let below: Option<&mut FieldType> = row_below
+                            .and_then(|r| x.checked_add_signed(m).and_then(|x| r.get_mut(x)));
+                        if below == Some(&mut FieldType::Air) {
+                            *(below.unwrap()) = FieldType::Sand;
+                            sand_has_fallen = true;
+                            break;
+                        }
                     }
-                    *(below.unwrap()) = FieldType::Sand;
-
-                    *model.grid.get_mut(y).unwrap().get_mut(x).unwrap() = FieldType::Air;
+                    if sand_has_fallen {
+                        *model.grid.get_mut(y).unwrap().get_mut(x).unwrap() = FieldType::Air;
+                    }
                 }
             };
         }
