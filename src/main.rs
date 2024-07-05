@@ -73,36 +73,34 @@ fn model(_app: &App) -> Model {
 
 #[inline]
 fn handle_mouse_interaction(app: &App, model: &mut Model) {
-    let field_type_to_set: Option<FieldType> = if app.mouse.buttons.left().is_down() {
-        Some(FieldType::Sand)
+    let field_type_to_set: FieldType = if app.mouse.buttons.left().is_down() {
+        FieldType::Sand
     } else if app.mouse.buttons.right().is_down() {
-        Some(FieldType::Air)
+        FieldType::Air
     } else if app.mouse.buttons.middle().is_down() {
-        Some(FieldType::Wood)
+        FieldType::Wood
     } else if app.keys.down.contains(&VirtualKeyCode::Space) {
-        Some(FieldType::SandSource)
+        FieldType::SandSource
     } else if app.keys.down.contains(&VirtualKeyCode::B) {
-        Some(FieldType::BlackHole)
+        FieldType::BlackHole
     } else {
-        None
+        return;
     };
-    if let Some(field_type) = field_type_to_set {
-        let point = app.mouse.position();
-        let (cell_size, display_rect) = get_cell_size_and_display_rect(app.main_window());
+    let point = app.mouse.position();
+    let (cell_size, display_rect) = get_cell_size_and_display_rect(app.main_window());
 
-        if display_rect.contains(point) {
-            let x = ((point.x - display_rect.left()) / cell_size)
-                .floor()
-                .to_usize()
-                .unwrap();
-            let y = ((display_rect.top() - point.y) / cell_size)
-                .floor()
-                .to_usize()
-                .unwrap();
+    if display_rect.contains(point) {
+        let x = ((point.x - display_rect.left()) / cell_size)
+            .floor()
+            .to_usize()
+            .unwrap();
+        let y = ((display_rect.top() - point.y) / cell_size)
+            .floor()
+            .to_usize()
+            .unwrap();
 
-            if let Some(value) = model.get_mut(x, y) {
-                *value = field_type;
-            }
+        if let Some(value) = model.get_mut(x, y) {
+            *value = field_type_to_set;
         }
     }
 }
