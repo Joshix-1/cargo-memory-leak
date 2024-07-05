@@ -51,6 +51,7 @@ impl Model {
     }
 }
 
+#[inline]
 fn get_cell_size_and_display_rect(window: Ref<Window>) -> (f32, Rect) {
     let cell_size = {
         let (px_width, px_height) = window.inner_size_points();
@@ -112,7 +113,7 @@ fn get_random_bool(app: &App) -> bool {
 
 fn update(app: &App, model: &mut Model, _update: Update) {
     for y in (0..GRID_HEIGHT_USIZE - 1).rev() {
-        let y_below = y.checked_add(1).unwrap();
+        let y_below = y + 1;
         let revert = get_random_bool(app);
         for x in 0..GRID_WIDTH_USIZE {
             let x = if revert { GRID_WIDTH_USIZE - 1 - x } else { x };
@@ -174,7 +175,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     let (cell_size, display_rect) = get_cell_size_and_display_rect(app.main_window());
 
-    let (left_x, top_y, _, _) = display_rect.l_t_w_h();
+    let (left_x, top_y) = (display_rect.left(), display_rect.top());
 
     for y in 0..GRID_HEIGHT {
         for x in 0..GRID_WIDTH {
@@ -188,8 +189,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
             draw.rect()
                 .color(colour)
-                .w(cell_size)
-                .h(cell_size)
+                .w_h(cell_size, cell_size)
                 .x(left_x + <f32 as From<u16>>::from(x) * cell_size)
                 .y(top_y - <f32 as From<u16>>::from(y) * cell_size);
         }
