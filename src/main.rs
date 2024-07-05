@@ -104,7 +104,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 FieldType::Wood => continue,
                 FieldType::Sand => {
                     // sand can fall down
-                    let left_first = app.duration.since_start.as_micros() % 2 == 0;
+                    let left_first = app.duration.since_start.as_micros() & 1 == 0;
 
                     let mut sand_has_fallen: bool = false;
                     for m in [
