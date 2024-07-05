@@ -1,6 +1,6 @@
 use nannou::prelude::*;
-use std::cell::Ref;
 use nannou::winit::event::VirtualKeyCode;
+use std::cell::Ref;
 
 const GRID_WIDTH: u16 = 125;
 const GRID_HEIGHT: u16 = 100;
@@ -139,7 +139,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                     .into_iter()
                     {
                         if let Some(curr_x) = x.checked_add_signed(m) {
-                            if curr_x != x && model.get(curr_x, y) != Some(&FieldType::Air){
+                            if curr_x != x && model.get(curr_x, y) != Some(&FieldType::Air) {
                                 continue;
                             }
                             if let Some(below) = model.get_mut(curr_x, y_below) {
