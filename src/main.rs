@@ -201,4 +201,8 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 
     draw.to_frame(app, &frame).unwrap();
+
+    if app.fps() < 50f32 {
+        eprintln!("{}", app.fps());
+    }
 }
