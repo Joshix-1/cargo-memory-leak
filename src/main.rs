@@ -1,5 +1,6 @@
 use nannou::prelude::*;
 use std::cell::Ref;
+use nannou::winit::event::VirtualKeyCode;
 
 const GRID_WIDTH: u16 = 125;
 const GRID_HEIGHT: u16 = 100;
@@ -22,6 +23,7 @@ enum FieldType {
     Air,
     Sand,
     Wood,
+    SandSource,
 }
 
 struct Model {
@@ -75,6 +77,8 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
         Some(FieldType::Air)
     } else if app.mouse.buttons.middle().is_down() {
         Some(FieldType::Wood)
+    } else if app.keys.down.contains(&VirtualKeyCode::Space) {
+        Some(FieldType::SandSource)
     } else {
         None
     };
@@ -110,8 +114,15 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         for x in 0..GRID_WIDTH_USIZE {
             let x = if revert { GRID_WIDTH_USIZE - 1 - x } else { x };
             match *model.get(x, y).unwrap() {
-                FieldType::Air => continue,
-                FieldType::Wood => continue,
+                FieldType::Air => (),
+                FieldType::Wood => (),
+                FieldType::SandSource => {
+                    if let Some(below) = model.get_mut(x, y_below) {
+                        if *below == FieldType::Air {
+                            *below = FieldType::Sand;
+                        }
+                    }
+                }
                 FieldType::Sand => {
                     // sand can fall down
                     let left_first = get_random_bool(app);
@@ -163,6 +174,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 FieldType::Air => BLACK,
                 FieldType::Sand => DEEPPINK,
                 FieldType::Wood => BURLYWOOD,
+                FieldType::SandSource => PINK,
             };
 
             draw.rect()
