@@ -100,8 +100,8 @@ fn get_random_bool(app: &App) -> bool {
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
-    for y in (0..GRID_HEIGHT_USIZE).rev() {
-        let y_below = y.checked_add(1);
+    for y in (0..GRID_HEIGHT_USIZE - 1).rev() {
+        let y_below = y.checked_add(1).unwrap();
         let revert = get_random_bool(app);
         for x in 0..GRID_WIDTH_USIZE {
             let x = if revert { GRID_WIDTH_USIZE - 1 - x } else { x };
@@ -120,14 +120,15 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                     ]
                     .into_iter()
                     {
-                        let below: Option<&mut FieldType> = y_below.and_then(|y| {
-                            x.checked_add_signed(m).and_then(|x| model.get_mut(x, y))
-                        });
-                        if below == Some(&mut FieldType::Air) {
-                            *(below.unwrap()) = FieldType::Sand;
-                            sand_has_fallen = true;
-                            break;
-                        }
+                        if let Some(x) = x.checked_add_signed(m) {
+                            if let Some(below) = model.get_mut(x, y_below) {
+                                if *below == FieldType::Air {
+                                    *below = FieldType::Sand;
+                                    sand_has_fallen = true;
+                                    break;
+                                }
+                            }
+                        };
                     }
                     if sand_has_fallen {
                         *model.get_mut(x, y).unwrap() = FieldType::Air;
