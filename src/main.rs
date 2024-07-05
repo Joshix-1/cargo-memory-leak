@@ -124,8 +124,11 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                     ]
                     .into_iter()
                     {
-                        if let Some(x) = x.checked_add_signed(m) {
-                            if let Some(below) = model.get_mut(x, y_below) {
+                        if let Some(curr_x) = x.checked_add_signed(m) {
+                            if curr_x != x && model.get(curr_x, y) != Some(&FieldType::Air){
+                                continue;
+                            }
+                            if let Some(below) = model.get_mut(curr_x, y_below) {
                                 if *below == FieldType::Air {
                                     *below = FieldType::Sand;
                                     sand_has_fallen = true;
