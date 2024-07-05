@@ -69,7 +69,8 @@ fn model(_app: &App) -> Model {
     Model::new()
 }
 
-fn update(app: &App, model: &mut Model, _update: Update) {
+#[inline]
+fn handle_mouse_interaction(app: &App, model: &mut Model) {
     let field_type_to_set: Option<FieldType> = if app.mouse.buttons.left().is_down() {
         Some(FieldType::Sand)
     } else if app.mouse.buttons.right().is_down() {
@@ -92,7 +93,9 @@ fn update(app: &App, model: &mut Model, _update: Update) {
             }
         }
     }
+}
 
+fn update(app: &App, model: &mut Model, _update: Update) {
     for y in (0..GRID_HEIGHT_USIZE).rev() {
         let y_below = y.checked_add(1);
         for x in 0..GRID_WIDTH_USIZE {
@@ -127,6 +130,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
             };
         }
     }
+    handle_mouse_interaction(app, model);
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
