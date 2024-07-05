@@ -84,11 +84,8 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         let (cell_size, display_rect) = get_cell_size_and_display_rect(app.main_window());
 
         if display_rect.contains(point) {
-            let x = ((point.x - display_rect.left()) / cell_size).floor();
-            let y = ((point.y - display_rect.top()) / cell_size).abs().floor();
-
-            let x: usize = x.to_usize().unwrap();
-            let y: usize = y.to_usize().unwrap();
+            let x = ((point.x - display_rect.left()) / cell_size).floor().to_usize().unwrap();
+            let y = ((display_rect.top() - point.y) / cell_size).floor().to_usize().unwrap();
 
             if let Some(value) = model.get_mut(x, y) {
                 *value = field_type;
@@ -139,22 +136,22 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     let (cell_size, display_rect) = get_cell_size_and_display_rect(app.main_window());
 
+    let (left_x, top_y) = Rect::from_w_h(cell_size, cell_size).top_left_of(display_rect).x_y();
+
     for y in 0..GRID_HEIGHT {
         for x in 0..GRID_WIDTH {
-            let cell: &FieldType = model.get(x as usize, y as usize).unwrap();
-
-            let colour = match cell {
-                &FieldType::Air => BLACK,
-                &FieldType::Sand => DEEPPINK,
-                &FieldType::Wood => BURLYWOOD,
+            let colour = match *model.get(x as usize, y as usize).unwrap() {
+                FieldType::Air => BLACK,
+                FieldType::Sand => DEEPPINK,
+                FieldType::Wood => BURLYWOOD,
             };
 
-            let mut rect = Rect::from_w_h(cell_size, cell_size).top_left_of(display_rect);
-
-            rect.x = rect.x.shift(<f32 as From<u16>>::from(x) * cell_size);
-            rect.y = rect.y.shift(-<f32 as From<u16>>::from(y) * cell_size);
-
-            draw.rect().color(colour).wh(rect.wh()).xy(rect.xy());
+            draw.rect()
+                .color(colour)
+                .w(cell_size)
+                .h(cell_size)
+                .x(left_x + <f32 as From<u16>>::from(x) * cell_size)
+                .y(top_y - <f32 as From<u16>>::from(y) * cell_size);
         }
     }
     draw.to_frame(app, &frame).unwrap();
