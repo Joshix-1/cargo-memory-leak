@@ -2,8 +2,8 @@ use nannou::prelude::*;
 use nannou::winit::event::VirtualKeyCode;
 use std::cell::Ref;
 
-const GRID_WIDTH: u16 = 125;
-const GRID_HEIGHT: u16 = 100;
+const GRID_WIDTH: u16 = 250;
+const GRID_HEIGHT: u16 = 200;
 
 const GRID_WIDTH_USIZE: usize = GRID_WIDTH as usize;
 const GRID_HEIGHT_USIZE: usize = GRID_HEIGHT as usize;
