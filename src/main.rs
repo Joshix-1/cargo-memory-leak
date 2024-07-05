@@ -175,10 +175,15 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     let (left_x, top_y) = (display_rect.left(), display_rect.top());
 
+    draw.rect()
+        .color(BLACK)
+        .wh(display_rect.wh())
+        .xy(display_rect.xy());
+
     for y in 0..GRID_HEIGHT {
         for x in 0..GRID_WIDTH {
             let colour = match *model.get(x, y).unwrap() {
-                FieldType::Air => BLACK,
+                FieldType::Air => continue,
                 FieldType::Sand => DEEPPINK,
                 FieldType::Wood => BURLYWOOD,
                 FieldType::SandSource => PINK,
