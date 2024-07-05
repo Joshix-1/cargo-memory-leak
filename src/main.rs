@@ -29,12 +29,14 @@ enum FieldType {
 
 struct Model {
     grid: Grid,
+    state: u16,
 }
 
 impl Model {
     fn new() -> Model {
         Model {
             grid: [[FieldType::Air; GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE],
+            state: 0xACE1,
         }
     }
 
@@ -48,6 +50,14 @@ impl Model {
         self.grid
             .get_mut(y.into())
             .and_then(|row| row.get_mut(x.into()))
+    }
+
+    #[inline]
+    fn get_random_bit(&mut self) -> bool {
+        // https://en.wikipedia.org/wiki/Linear-feedback_shift_register#Fibonacci_LFSRs
+        let bit = ((self.state >> 0) ^ (self.state >> 2) ^ (self.state >> 3) ^ (self.state >> 5)) & 1;
+        self.state = (self.state >> 1) | (bit << 15);
+        bit != 0
     }
 }
 
@@ -67,6 +77,7 @@ fn get_cell_size_and_display_rect(window: Ref<Window>) -> (f32, Rect) {
     (cell_size, display_rect)
 }
 
+#[inline]
 fn model(_app: &App) -> Model {
     Model::new()
 }
@@ -105,14 +116,11 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
     }
 }
 
-fn get_random_bool(app: &App) -> bool {
-    return app.duration.since_start.as_nanos() & 1 == 0;
-}
-
+#[inline]
 fn update(app: &App, model: &mut Model, _update: Update) {
     for y in (0..GRID_HEIGHT_USIZE - 1).rev() {
         let y_below = y + 1;
-        let revert = get_random_bool(app);
+        let revert = model.get_random_bit();
         for x in 0..GRID_WIDTH_USIZE {
             let x = if revert { GRID_WIDTH_USIZE - 1 - x } else { x };
             match *model.get(x, y).unwrap() {
@@ -128,7 +136,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 }
                 FieldType::Sand => {
                     // sand can fall down
-                    let left_first = get_random_bool(app);
+                    let left_first = model.get_random_bit();
 
                     let mut sand_has_fallen: bool = false;
                     for m in [
