@@ -28,6 +28,16 @@ impl Model {
             grid: [[FieldType::Air; GRID_WIDTH as usize]; GRID_HEIGHT as usize],
         }
     }
+
+    #[inline]
+    fn get(&self, x: usize, y: usize) -> Option<&FieldType> {
+        self.grid.get(y).and_then(|row| row.get(x))
+    }
+
+    #[inline]
+    fn get_mut(&mut self, x: usize, y: usize) -> Option<&mut FieldType> {
+        self.grid.get_mut(y).and_then(|row| row.get_mut(x))
+    }
 }
 
 fn get_cell_size_and_display_rect(window: Ref<Window>) -> (f32, Rect) {
@@ -73,8 +83,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
             let x: usize = x.to_usize().unwrap();
             let y: usize = y.to_usize().unwrap();
 
-            let cell = model.grid.get_mut(y).and_then(|r| r.get_mut(x));
-            if let Some(value) = cell {
+            if let Some(value) = model.get_mut(x, y) {
                 *value = field_type;
             }
         }
@@ -83,7 +92,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     for y in (0..<usize as From<u16>>::from(GRID_HEIGHT)).rev() {
         let y_below = y.checked_add(1);
         for x in 0..<usize as From<u16>>::from(GRID_WIDTH) {
-            match model.grid.get(y).unwrap().get(x).unwrap().clone() {
+            match *model.get(x, y).unwrap() {
                 FieldType::Air => continue,
                 FieldType::Wood => continue,
                 FieldType::Sand => {
@@ -98,10 +107,9 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                     ]
                     .into_iter()
                     {
-                        let row_below: Option<&mut Row> =
-                            y_below.and_then(|y| model.grid.get_mut(y));
-                        let below: Option<&mut FieldType> = row_below
-                            .and_then(|r| x.checked_add_signed(m).and_then(|x| r.get_mut(x)));
+                        let below: Option<&mut FieldType> = y_below.and_then(|y| {
+                            x.checked_add_signed(m).and_then(|x| model.get_mut(x, y))
+                        });
                         if below == Some(&mut FieldType::Air) {
                             *(below.unwrap()) = FieldType::Sand;
                             sand_has_fallen = true;
@@ -109,7 +117,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                         }
                     }
                     if sand_has_fallen {
-                        *model.grid.get_mut(y).unwrap().get_mut(x).unwrap() = FieldType::Air;
+                        *model.get_mut(x, y).unwrap() = FieldType::Air;
                     }
                 }
             };
@@ -125,9 +133,8 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let (cell_size, display_rect) = get_cell_size_and_display_rect(app.main_window());
 
     for y in 0..GRID_HEIGHT {
-        let row: &Row = model.grid.get(<usize as From<u16>>::from(y)).unwrap();
         for x in 0..GRID_WIDTH {
-            let cell: &FieldType = row.get(<usize as From<u16>>::from(x)).unwrap();
+            let cell: &FieldType = model.get(x as usize, y as usize).unwrap();
 
             let colour = match cell {
                 &FieldType::Air => BLACK,
