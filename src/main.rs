@@ -24,6 +24,7 @@ enum FieldType {
     Sand,
     Wood,
     SandSource,
+    BlackHole,
 }
 
 struct Model {
@@ -79,6 +80,8 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
         Some(FieldType::Wood)
     } else if app.keys.down.contains(&VirtualKeyCode::Space) {
         Some(FieldType::SandSource)
+    } else if app.keys.down.contains(&VirtualKeyCode::B) {
+        Some(FieldType::BlackHole)
     } else {
         None
     };
@@ -116,6 +119,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
             match *model.get(x, y).unwrap() {
                 FieldType::Air => (),
                 FieldType::Wood => (),
+                FieldType::BlackHole => (),
                 FieldType::SandSource => {
                     if let Some(below) = model.get_mut(x, y_below) {
                         if *below == FieldType::Air {
@@ -142,6 +146,10 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                             if let Some(below) = model.get_mut(curr_x, y_below) {
                                 if *below == FieldType::Air {
                                     *below = FieldType::Sand;
+                                    sand_has_fallen = true;
+                                    break;
+                                }
+                                if *below == FieldType::BlackHole {
                                     sand_has_fallen = true;
                                     break;
                                 }
@@ -175,6 +183,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 FieldType::Sand => DEEPPINK,
                 FieldType::Wood => BURLYWOOD,
                 FieldType::SandSource => PINK,
+                FieldType::BlackHole => DARKSLATEGRAY,
             };
 
             draw.rect()
