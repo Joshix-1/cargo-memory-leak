@@ -4,8 +4,15 @@ use std::cell::Ref;
 const GRID_WIDTH: u16 = 125;
 const GRID_HEIGHT: u16 = 100;
 
-type Row = [FieldType; GRID_WIDTH as usize];
-type Grid = [Row; GRID_HEIGHT as usize];
+const GRID_WIDTH_USIZE: usize = GRID_WIDTH as usize;
+const GRID_HEIGHT_USIZE: usize = GRID_HEIGHT as usize;
+
+const GRID_WIDTH_F32: f32 = GRID_WIDTH as f32;
+const GRID_HEIGHT_F32: f32 = GRID_HEIGHT as f32;
+
+
+type Row = [FieldType; GRID_WIDTH_USIZE];
+type Grid = [Row; GRID_HEIGHT_USIZE];
 
 fn main() {
     nannou::app(model).update(update).simple_window(view).run();
@@ -25,7 +32,7 @@ struct Model {
 impl Model {
     fn new() -> Model {
         Model {
-            grid: [[FieldType::Air; GRID_WIDTH as usize]; GRID_HEIGHT as usize],
+            grid: [[FieldType::Air; GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE],
         }
     }
 
@@ -44,15 +51,15 @@ fn get_cell_size_and_display_rect(window: Ref<Window>) -> (f32, Rect) {
     let cell_size = {
         let (px_width, px_height) = window.inner_size_points();
 
-        let max_cell_size_x = px_width / <f32 as From<u16>>::from(GRID_WIDTH);
-        let max_cell_size_y = px_height / <f32 as From<u16>>::from(GRID_HEIGHT);
+        let max_cell_size_x = px_width / GRID_WIDTH_F32;
+        let max_cell_size_y = px_height / GRID_HEIGHT_F32;
 
         max_cell_size_x.min(max_cell_size_y)
     };
 
     let display_rect = Rect::from_w_h(
-        <f32 as From<u16>>::from(GRID_WIDTH) * cell_size,
-        <f32 as From<u16>>::from(GRID_HEIGHT) * cell_size,
+        GRID_WIDTH_F32 * cell_size,
+        GRID_HEIGHT_F32 * cell_size,
     );
 
     (cell_size, display_rect)
@@ -89,9 +96,9 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         }
     }
 
-    for y in (0..<usize as From<u16>>::from(GRID_HEIGHT)).rev() {
+    for y in (0..GRID_HEIGHT_USIZE).rev() {
         let y_below = y.checked_add(1);
-        for x in 0..<usize as From<u16>>::from(GRID_WIDTH) {
+        for x in 0..GRID_WIDTH_USIZE {
             match *model.get(x, y).unwrap() {
                 FieldType::Air => continue,
                 FieldType::Wood => continue,
