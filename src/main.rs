@@ -102,7 +102,9 @@ fn get_random_bool(app: &App) -> bool {
 fn update(app: &App, model: &mut Model, _update: Update) {
     for y in (0..GRID_HEIGHT_USIZE).rev() {
         let y_below = y.checked_add(1);
+        let revert = get_random_bool(app);
         for x in 0..GRID_WIDTH_USIZE {
+            let x = if revert { GRID_WIDTH_USIZE - 1 - x } else { x };
             match *model.get(x, y).unwrap() {
                 FieldType::Air => continue,
                 FieldType::Wood => continue,
