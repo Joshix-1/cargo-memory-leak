@@ -10,7 +10,6 @@ const GRID_HEIGHT_USIZE: usize = GRID_HEIGHT as usize;
 const GRID_WIDTH_F32: f32 = GRID_WIDTH as f32;
 const GRID_HEIGHT_F32: f32 = GRID_HEIGHT as f32;
 
-
 type Row = [FieldType; GRID_WIDTH_USIZE];
 type Grid = [Row; GRID_HEIGHT_USIZE];
 
@@ -37,13 +36,15 @@ impl Model {
     }
 
     #[inline]
-    fn get<T : Into<usize>>(&self, x: T, y: T) -> Option<&FieldType> {
+    fn get<T: Into<usize>>(&self, x: T, y: T) -> Option<&FieldType> {
         self.grid.get(y.into()).and_then(|row| row.get(x.into()))
     }
 
     #[inline]
-    fn get_mut<T : Into<usize>>(&mut self, x: T, y: T) -> Option<&mut FieldType> {
-        self.grid.get_mut(y.into()).and_then(|row| row.get_mut(x.into()))
+    fn get_mut<T: Into<usize>>(&mut self, x: T, y: T) -> Option<&mut FieldType> {
+        self.grid
+            .get_mut(y.into())
+            .and_then(|row| row.get_mut(x.into()))
     }
 }
 
@@ -57,10 +58,7 @@ fn get_cell_size_and_display_rect(window: Ref<Window>) -> (f32, Rect) {
         max_cell_size_x.min(max_cell_size_y)
     };
 
-    let display_rect = Rect::from_w_h(
-        GRID_WIDTH_F32 * cell_size,
-        GRID_HEIGHT_F32 * cell_size,
-    );
+    let display_rect = Rect::from_w_h(GRID_WIDTH_F32 * cell_size, GRID_HEIGHT_F32 * cell_size);
 
     (cell_size, display_rect)
 }
@@ -85,8 +83,14 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
         let (cell_size, display_rect) = get_cell_size_and_display_rect(app.main_window());
 
         if display_rect.contains(point) {
-            let x = ((point.x - display_rect.left()) / cell_size).floor().to_usize().unwrap();
-            let y = ((display_rect.top() - point.y) / cell_size).floor().to_usize().unwrap();
+            let x = ((point.x - display_rect.left()) / cell_size)
+                .floor()
+                .to_usize()
+                .unwrap();
+            let y = ((display_rect.top() - point.y) / cell_size)
+                .floor()
+                .to_usize()
+                .unwrap();
 
             if let Some(value) = model.get_mut(x, y) {
                 *value = field_type;
