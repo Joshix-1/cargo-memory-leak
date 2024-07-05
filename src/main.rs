@@ -19,13 +19,13 @@ enum FieldType {
 }
 
 struct Model {
-    grid: Grid,
+    grid: Box<Grid>,
 }
 
 impl Model {
     fn new() -> Model {
         Model {
-            grid: [[FieldType::Air; GRID_WIDTH as usize]; GRID_HEIGHT as usize],
+            grid: Box::new([[FieldType::Air; GRID_WIDTH as usize]; GRID_HEIGHT as usize]),
         }
     }
 }
