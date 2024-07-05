@@ -37,13 +37,13 @@ impl Model {
     }
 
     #[inline]
-    fn get(&self, x: usize, y: usize) -> Option<&FieldType> {
-        self.grid.get(y).and_then(|row| row.get(x))
+    fn get<T : Into<usize>>(&self, x: T, y: T) -> Option<&FieldType> {
+        self.grid.get(y.into()).and_then(|row| row.get(x.into()))
     }
 
     #[inline]
-    fn get_mut(&mut self, x: usize, y: usize) -> Option<&mut FieldType> {
-        self.grid.get_mut(y).and_then(|row| row.get_mut(x))
+    fn get_mut<T : Into<usize>>(&mut self, x: T, y: T) -> Option<&mut FieldType> {
+        self.grid.get_mut(y.into()).and_then(|row| row.get_mut(x.into()))
     }
 }
 
@@ -140,7 +140,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     for y in 0..GRID_HEIGHT {
         for x in 0..GRID_WIDTH {
-            let colour = match *model.get(x as usize, y as usize).unwrap() {
+            let colour = match *model.get(x, y).unwrap() {
                 FieldType::Air => BLACK,
                 FieldType::Sand => DEEPPINK,
                 FieldType::Wood => BURLYWOOD,
