@@ -158,5 +158,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .y(top_y - <f32 as From<u16>>::from(y) * cell_size);
         }
     }
+
+    draw.text(&app.fps().to_string());
     draw.to_frame(app, &frame).unwrap();
 }
