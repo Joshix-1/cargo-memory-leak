@@ -95,6 +95,10 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
     }
 }
 
+fn get_random_bool(app: &App) -> bool {
+    return app.duration.since_start.as_nanos() & 1 == 0;
+}
+
 fn update(app: &App, model: &mut Model, _update: Update) {
     for y in (0..GRID_HEIGHT_USIZE).rev() {
         let y_below = y.checked_add(1);
@@ -104,7 +108,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 FieldType::Wood => continue,
                 FieldType::Sand => {
                     // sand can fall down
-                    let left_first = app.duration.since_start.as_micros() & 1 == 0;
+                    let left_first = get_random_bool(app);
 
                     let mut sand_has_fallen: bool = false;
                     for m in [
@@ -130,6 +134,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
             };
         }
     }
+
     handle_mouse_interaction(app, model);
 }
 
