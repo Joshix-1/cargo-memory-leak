@@ -32,17 +32,13 @@ impl Model {
 
 fn get_cell_size_and_display_rect(window: Ref<Window>) -> (f32, Rect) {
     let cell_size = {
-        let (px_width, px_height) = window.inner_size_pixels();
+        let (px_width, px_height) = window.inner_size_points();
 
-        let max_cell_size_x = px_width / <u32 as From<u16>>::from(GRID_WIDTH);
-        let max_cell_size_y = px_height / <u32 as From<u16>>::from(GRID_HEIGHT);
+        let max_cell_size_x = px_width / <f32 as From<u16>>::from(GRID_WIDTH);
+        let max_cell_size_y = px_height / <f32 as From<u16>>::from(GRID_HEIGHT);
 
         max_cell_size_x.min(max_cell_size_y)
     };
-
-    let scale_factor = window.scale_factor();
-
-    let cell_size = <f32 as NumCast>::from(cell_size).unwrap() / scale_factor;
 
     let display_rect = Rect::from_w_h(
         <f32 as From<u16>>::from(GRID_WIDTH) * cell_size,
