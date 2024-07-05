@@ -136,7 +136,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     let (cell_size, display_rect) = get_cell_size_and_display_rect(app.main_window());
 
-    let (left_x, top_y) = Rect::from_w_h(cell_size, cell_size).top_left_of(display_rect).x_y();
+    let (left_x, top_y, _, _) = display_rect.l_t_w_h();
 
     for y in 0..GRID_HEIGHT {
         for x in 0..GRID_WIDTH {
