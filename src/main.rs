@@ -15,6 +15,7 @@ fn main() {
 enum FieldType {
     Air,
     Sand,
+    Wood,
 }
 
 struct Model {
@@ -60,6 +61,8 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         Some(FieldType::Sand)
     } else if app.mouse.buttons.right().is_down() {
         Some(FieldType::Air)
+    } else if app.mouse.buttons.middle().is_down() {
+        Some(FieldType::Wood)
     } else {
         None
     };
@@ -86,6 +89,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         for x in 0..<usize as From<u16>>::from(GRID_WIDTH) {
             match model.grid.get(y).unwrap().get(x).unwrap().clone() {
                 FieldType::Air => continue,
+                FieldType::Wood => continue,
                 FieldType::Sand => {
                     // sand can fall down
                     let left_first = app.duration.since_start.as_micros() % 2 == 0;
@@ -132,6 +136,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             let colour = match cell {
                 &FieldType::Air => BLACK,
                 &FieldType::Sand => DEEPPINK,
+                &FieldType::Wood => BURLYWOOD,
             };
 
             let mut rect = Rect::from_w_h(cell_size, cell_size).top_left_of(display_rect);
