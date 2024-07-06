@@ -302,7 +302,10 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     draw.rect().color(BLACK).wh(display_rect.wh());
 
-    let draw = draw.x_y(display_rect.left(), display_rect.top());
+    let draw = draw.x_y(
+        display_rect.left() + cell_size / 2f32,
+        display_rect.top() - cell_size / 2f32,
+    );
 
     for y in 0..GRID_HEIGHT {
         let draw = draw.y(-<f32 as From<u16>>::from(y) * cell_size);
