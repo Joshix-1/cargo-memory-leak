@@ -15,6 +15,22 @@ type Row = [FieldType; GRID_WIDTH_USIZE];
 type Grid = [Row; GRID_HEIGHT_USIZE];
 
 fn main() {
+    let mut m = Model::new();
+    let mut i: u32 = 1;
+    let mut t: u32 = if m.get_random_bit() { 1 } else { 0 };
+    let mut f: u32 = if t == 0 { 1 } else { 0 };
+    while m.state != 0xACE1  && i < u16::MAX as u32 {
+        if m.get_random_bit() {
+            t += 1;
+        } else {
+            f += 1;
+        }
+        i += 1;
+    }
+
+    eprintln!("period={i}, t={t}, f={f}, state={}", m.state);
+    return;
+
     nannou::app(model).update(update).simple_window(view).run();
 }
 
