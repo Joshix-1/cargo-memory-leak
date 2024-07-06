@@ -23,30 +23,44 @@ fn main() {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
-struct SandColor(u8);
+#[rustfmt::skip]
+enum SandColor {
+    Z, P1, P2, P3,
+    P4, P5, P6, P7,
+}
 
 impl SandColor {
-    fn new(data: &mut Model) -> Self {
+    #[inline]
+    fn from_random_source<R: FnMut() -> bool>(mut get_random_bit: R) -> Self {
         let mut byte: u8 = 0;
         for _ in 0..3 {
             byte <<= 1;
-            byte |= if data.get_random_bit() { 1 } else { 0 };
+            byte |= if get_random_bit() { 1 } else { 0 };
         }
-        SandColor(byte)
+        match byte {
+            0 => SandColor::Z,
+            1 => SandColor::P1,
+            2 => SandColor::P2,
+            3 => SandColor::P3,
+            4 => SandColor::P4,
+            5 => SandColor::P5,
+            6 => SandColor::P6,
+            7 => SandColor::P7,
+            _ => panic!("{byte:0b} should be a 3 bit number"),
+        }
     }
 
     #[rustfmt::skip]
     const fn get_color(&self) -> Srgb<u8> {
-        match self.0 {
-            0 => Srgb { red: 255, green: 20, blue: 147, standard: PhantomData },
-            1 => Srgb { red: 255, green: 102, blue: 179, standard: PhantomData },
-            2 => Srgb { red: 255, green: 163, blue: 194, standard: PhantomData },
-            3 => Srgb { red: 255, green: 77, blue: 148, standard: PhantomData },
-            4 => Srgb { red: 255, green: 133, blue: 149, standard: PhantomData },
-            5 => Srgb { red: 255, green: 128, blue: 161, standard: PhantomData },
-            6 => Srgb { red: 255, green: 177, blue: 173, standard: PhantomData },
-            7 => Srgb { red: 255, green: 219, blue: 229, standard: PhantomData },
-            _ => panic!("only 3 bits should be set"),
+        match self {
+            SandColor::Z => Srgb { red: 255, green: 20, blue: 147, standard: PhantomData },
+            SandColor::P1 => Srgb { red: 255, green: 102, blue: 179, standard: PhantomData },
+            SandColor::P2 => Srgb { red: 255, green: 163, blue: 194, standard: PhantomData },
+            SandColor::P3 => Srgb { red: 255, green: 77, blue: 148, standard: PhantomData },
+            SandColor::P4 => Srgb { red: 255, green: 133, blue: 149, standard: PhantomData },
+            SandColor::P5 => Srgb { red: 255, green: 128, blue: 161, standard: PhantomData },
+            SandColor::P6 => Srgb { red: 255, green: 177, blue: 173, standard: PhantomData },
+            SandColor::P7 => Srgb { red: 255, green: 219, blue: 229, standard: PhantomData },
         }
     }
 }
@@ -123,7 +137,7 @@ fn model(_app: &App) -> Model {
 #[inline]
 fn handle_mouse_interaction(app: &App, model: &mut Model) {
     let field_type_to_set: FieldType = if app.mouse.buttons.left().is_down() {
-        FieldType::Sand(SandColor::new(model))
+        FieldType::Sand(SandColor::from_random_source(|| model.get_random_bit()))
     } else if app.mouse.buttons.right().is_down() {
         FieldType::Air
     } else if app.mouse.buttons.middle().is_down() {
@@ -166,7 +180,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 FieldType::Wood => (),
                 FieldType::BlackHole => (),
                 FieldType::SandSource => {
-                    let color = SandColor::new(model);
+                    let color = SandColor::from_random_source(|| model.get_random_bit());
                     if let Some(below) = model.get_mut(x, y_below) {
                         if *below == FieldType::Air {
                             *below = FieldType::Sand(color);
