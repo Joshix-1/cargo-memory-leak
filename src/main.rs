@@ -211,35 +211,42 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 }
                 FieldType::Sand(d) => {
                     // sand can fall down
-                    let left_first = model.get_random_bit();
-
-                    let mut sand_has_fallen: bool = false;
-                    for m in [
-                        0isize,
-                        if left_first { -1 } else { 1 },
-                        if left_first { 1 } else { -1 },
-                    ]
-                    .into_iter()
-                    {
-                        if let Some(curr_x) = x.checked_add_signed(m) {
-                            if curr_x != x && model.get(curr_x, y) != Some(&FieldType::Air) {
-                                continue;
-                            }
-                            if let Some(below) = model.get_mut(curr_x, y_below) {
-                                if *below == FieldType::Air {
-                                    *below = FieldType::Sand(d);
-                                    sand_has_fallen = true;
-                                    break;
-                                }
-                                if *below == FieldType::BlackHole {
-                                    sand_has_fallen = true;
-                                    break;
-                                }
-                            }
-                        };
-                    }
-                    if sand_has_fallen {
+                    if if let Some(below) = model.get_mut(x, y_below) {
+                        if *below == FieldType::Air {
+                            *below = FieldType::Sand(d);
+                            true
+                        } else if *below == FieldType::BlackHole {
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    } {
                         *model.get_mut(x, y).unwrap() = FieldType::Air;
+                    } else {
+                        for dx in if model.get_random_bit() {
+                            [1, -1]
+                        } else {
+                            [-1, 1]
+                        } {
+                            if let Some(curr_x) = x.checked_add_signed(dx) {
+                                if curr_x != x && model.get(curr_x, y) != Some(&FieldType::Air) {
+                                    continue;
+                                }
+                                if let Some(below) = model.get(curr_x, y_below) {
+                                    if *below == FieldType::Air {
+                                        *model.get_mut(curr_x, y).unwrap() = FieldType::Sand(d);
+                                        *model.get_mut(x, y).unwrap() = FieldType::Air;
+                                        break;
+                                    }
+                                    if *below == FieldType::BlackHole {
+                                        *model.get_mut(x, y).unwrap() = FieldType::Air;
+                                        break;
+                                    }
+                                }
+                            };
+                        }
                     }
                 }
             };
