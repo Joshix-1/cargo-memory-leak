@@ -31,36 +31,36 @@ fn main() {
 #[derive(Copy, Clone, Eq, PartialEq)]
 #[rustfmt::skip]
 enum SandColor {
-    Z, P1, P2, P3,
-    P4, P5, P6, P7,
+    C0, C1, C2, C3,
+    C4, C5, C6, C7,
 }
 
 impl SandColor {
     #[inline]
     fn from_random_source<R: FnMut() -> bool>(mut get_random_bit: R) -> Self {
         match (get_random_bit(), get_random_bit(), get_random_bit()) {
-            (false, false, false) => SandColor::Z,
-            (false, false, true) => SandColor::P1,
-            (false, true, false) => SandColor::P2,
-            (false, true, true) => SandColor::P3,
-            (true, false, false) => SandColor::P4,
-            (true, false, true) => SandColor::P5,
-            (true, true, false) => SandColor::P6,
-            (true, true, true) => SandColor::P7,
+            (false, false, false) => SandColor::C0,
+            (false, false, true) => SandColor::C1,
+            (false, true, false) => SandColor::C2,
+            (false, true, true) => SandColor::C3,
+            (true, false, false) => SandColor::C4,
+            (true, false, true) => SandColor::C5,
+            (true, true, false) => SandColor::C6,
+            (true, true, true) => SandColor::C7,
         }
     }
 
     #[rustfmt::skip]
     const fn get_color(&self) -> Srgb<u8> {
         match self {
-            SandColor::Z => Srgb { red: 255, green: 20, blue: 147, standard: PhantomData },
-            SandColor::P1 => Srgb { red: 255, green: 102, blue: 179, standard: PhantomData },
-            SandColor::P2 => Srgb { red: 255, green: 163, blue: 194, standard: PhantomData },
-            SandColor::P3 => Srgb { red: 255, green: 77, blue: 148, standard: PhantomData },
-            SandColor::P4 => Srgb { red: 255, green: 133, blue: 149, standard: PhantomData },
-            SandColor::P5 => Srgb { red: 255, green: 128, blue: 161, standard: PhantomData },
-            SandColor::P6 => Srgb { red: 255, green: 177, blue: 173, standard: PhantomData },
-            SandColor::P7 => Srgb { red: 255, green: 219, blue: 229, standard: PhantomData },
+            SandColor::C0 => Srgb { red: 255, green: 20, blue: 147, standard: PhantomData },
+            SandColor::C1 => Srgb { red: 255, green: 102, blue: 179, standard: PhantomData },
+            SandColor::C2 => Srgb { red: 255, green: 163, blue: 194, standard: PhantomData },
+            SandColor::C3 => Srgb { red: 255, green: 77, blue: 148, standard: PhantomData },
+            SandColor::C4 => Srgb { red: 255, green: 133, blue: 149, standard: PhantomData },
+            SandColor::C5 => Srgb { red: 255, green: 128, blue: 161, standard: PhantomData },
+            SandColor::C6 => Srgb { red: 255, green: 177, blue: 173, standard: PhantomData },
+            SandColor::C7 => Srgb { red: 255, green: 219, blue: 229, standard: PhantomData },
         }
     }
 }
