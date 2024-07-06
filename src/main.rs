@@ -19,7 +19,7 @@ type Row = [FieldType; GRID_WIDTH_USIZE];
 type Grid = [Row; GRID_HEIGHT_USIZE];
 
 fn main() {
-    const _:() = assert!(size_of::<FieldType>() == 1);
+    const _: () = assert!(size_of::<FieldType>() == 1);
     nannou::app(model).update(update).simple_window(view).run();
 }
 
@@ -127,7 +127,8 @@ impl Model {
     }
 
     fn to_bytes(&self) -> Vec<u8> {
-        self.grid.iter()
+        self.grid
+            .iter()
             .flat_map(|r| r.iter())
             .map(|c| c.to_byte())
             .collect()
@@ -178,7 +179,10 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
         static mut JUST_SAVED: bool = false;
         if app.keys.mods.ctrl() && app.keys.down.contains(&VirtualKeyCode::S) {
             if !JUST_SAVED {
-                File::create(SAVE_FILE).unwrap().write_all(&model.to_bytes()).unwrap();
+                File::create(SAVE_FILE)
+                    .unwrap()
+                    .write_all(&model.to_bytes())
+                    .unwrap();
                 println!("Written data to save.dat");
                 JUST_SAVED = true;
                 return;
