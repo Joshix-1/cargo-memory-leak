@@ -54,7 +54,7 @@ impl Model {
 
     #[inline]
     fn get_random_bit(&mut self) -> bool {
-        const INV1: u16 = 0u16.wrapping_sub(2);  // ~1
+        const INV1: u16 = 0u16.wrapping_sub(2);
         // https://en.wikipedia.org/wiki/Linear-feedback_shift_register#Fibonacci_LFSRs
         let bit = (self.state & 0x2D).count_ones() as u16 & 1u16;
         self.state = ((self.state & INV1) | bit).rotate_right(1);
