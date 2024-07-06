@@ -32,56 +32,17 @@ impl SandColor {
         SandColor(byte)
     }
 
+    #[rustfmt::skip]
     const fn get_color(&self) -> Srgb<u8> {
         match self.0 {
-            0 => Srgb {
-                red: 255,
-                green: 20,
-                blue: 147,
-                standard: PhantomData,
-            },
-            1 => Srgb {
-                red: 255,
-                green: 102,
-                blue: 179,
-                standard: PhantomData,
-            },
-            2 => Srgb {
-                red: 255,
-                green: 163,
-                blue: 194,
-                standard: PhantomData,
-            },
-            3 => Srgb {
-                red: 255,
-                green: 77,
-                blue: 148,
-                standard: PhantomData,
-            },
-            4 => Srgb {
-                red: 255,
-                green: 133,
-                blue: 149,
-                standard: PhantomData,
-            },
-            5 => Srgb {
-                red: 255,
-                green: 128,
-                blue: 161,
-                standard: PhantomData,
-            },
-            6 => Srgb {
-                red: 255,
-                green: 177,
-                blue: 173,
-                standard: PhantomData,
-            },
-            7 => Srgb {
-                red: 255,
-                green: 219,
-                blue: 229,
-                standard: PhantomData,
-            },
+            0 => Srgb { red: 255, green: 20, blue: 147, standard: PhantomData },
+            1 => Srgb { red: 255, green: 102, blue: 179, standard: PhantomData },
+            2 => Srgb { red: 255, green: 163, blue: 194, standard: PhantomData },
+            3 => Srgb { red: 255, green: 77, blue: 148, standard: PhantomData },
+            4 => Srgb { red: 255, green: 133, blue: 149, standard: PhantomData },
+            5 => Srgb { red: 255, green: 128, blue: 161, standard: PhantomData },
+            6 => Srgb { red: 255, green: 177, blue: 173, standard: PhantomData },
+            7 => Srgb { red: 255, green: 219, blue: 229, standard: PhantomData },
             _ => panic!("only 3 bits should be set"),
         }
     }
