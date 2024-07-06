@@ -187,6 +187,10 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
             JUST_SAVED = false;
         }
     }
+    if app.keys.mods.ctrl() && app.keys.down.contains(&VirtualKeyCode::R) {
+        model.grid = Model::new().grid;
+        return;
+    }
     let field_type_to_set: FieldType = if app.mouse.buttons.left().is_down() {
         FieldType::Sand(SandColor::from_random_source(|| model.get_random_bit()))
     } else if app.mouse.buttons.right().is_down() {
