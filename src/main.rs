@@ -107,7 +107,7 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
             .to_usize()
             .unwrap();
         let y = ((display_rect.top() - point.y) / cell_size)
-            .floor()
+            .round()
             .to_usize()
             .unwrap();
 
