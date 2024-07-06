@@ -226,7 +226,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 FieldType::Air => continue,
                 FieldType::Sand(b) => b.get_color(),
                 FieldType::Wood => BURLYWOOD,
-                FieldType::SandSource => PINK,
+                FieldType::SandSource => WHITE,
                 FieldType::BlackHole => DARKSLATEGRAY,
             };
 
