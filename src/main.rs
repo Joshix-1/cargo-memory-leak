@@ -34,14 +34,54 @@ impl SandColor {
 
     const fn get_color(&self) -> Srgb<u8> {
         match self.0 {
-            0 => Srgb { red: 255, green: 20, blue: 147, standard: PhantomData },
-            1 => Srgb { red: 255, green: 102, blue: 179, standard: PhantomData },
-            2 => Srgb { red: 255, green: 163, blue: 194, standard: PhantomData },
-            3 => Srgb { red: 255, green: 77, blue: 148, standard: PhantomData },
-            4 => Srgb { red: 255, green: 133, blue: 149, standard: PhantomData },
-            5 => Srgb { red: 255, green: 128, blue: 161, standard: PhantomData },
-            6 => Srgb { red: 255, green: 177, blue: 173, standard: PhantomData },
-            7 => Srgb { red: 255, green: 219, blue: 229, standard: PhantomData },
+            0 => Srgb {
+                red: 255,
+                green: 20,
+                blue: 147,
+                standard: PhantomData,
+            },
+            1 => Srgb {
+                red: 255,
+                green: 102,
+                blue: 179,
+                standard: PhantomData,
+            },
+            2 => Srgb {
+                red: 255,
+                green: 163,
+                blue: 194,
+                standard: PhantomData,
+            },
+            3 => Srgb {
+                red: 255,
+                green: 77,
+                blue: 148,
+                standard: PhantomData,
+            },
+            4 => Srgb {
+                red: 255,
+                green: 133,
+                blue: 149,
+                standard: PhantomData,
+            },
+            5 => Srgb {
+                red: 255,
+                green: 128,
+                blue: 161,
+                standard: PhantomData,
+            },
+            6 => Srgb {
+                red: 255,
+                green: 177,
+                blue: 173,
+                standard: PhantomData,
+            },
+            7 => Srgb {
+                red: 255,
+                green: 219,
+                blue: 229,
+                standard: PhantomData,
+            },
             _ => panic!("only 3 bits should be set"),
         }
     }
@@ -86,7 +126,8 @@ impl Model {
         // ~1
         const INV1: u32 = 0u32.wrapping_sub(2);
         // https://old.reddit.com/r/cryptography/comments/idftm3/having_trouble_understanding_the_fibonacci_lfsr/g294tqu/
-        const TAPS: u32 = (1 << 15) | (1 << 12) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 3) | (1 << 2) | (1 << 1);
+        const TAPS: u32 =
+            (1 << 15) | (1 << 12) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 3) | (1 << 2) | (1 << 1);
         // https://en.wikipedia.org/wiki/Linear-feedback_shift_register#Fibonacci_LFSRs
         let bit = (self.state & TAPS).count_ones() & 1u32;
         self.state = ((self.state & INV1) | bit).rotate_right(1);
