@@ -1,6 +1,7 @@
 use nannou::prelude::*;
 use nannou::winit::event::VirtualKeyCode;
 use std::cell::Ref;
+use std::marker::PhantomData;
 
 const GRID_HEIGHT: u16 = 150;
 const GRID_WIDTH: u16 = (GRID_HEIGHT * 4) / 3;
@@ -19,9 +20,37 @@ fn main() {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
+struct SandColor(u8);
+
+impl SandColor {
+    fn new(data: &mut Model) -> Self {
+        let mut byte: u8 = 0;
+        for _ in 0..3 {
+            byte <<= 1;
+            byte |= if data.get_random_bit() { 1 } else { 0 };
+        }
+        SandColor(byte)
+    }
+
+    const fn get_color(&self) -> Srgb<u8> {
+        match self.0 {
+            0 => Srgb { red: 255, green: 20, blue: 147, standard: PhantomData },
+            1 => Srgb { red: 255, green: 102, blue: 179, standard: PhantomData },
+            2 => Srgb { red: 255, green: 163, blue: 194, standard: PhantomData },
+            3 => Srgb { red: 255, green: 77, blue: 148, standard: PhantomData },
+            4 => Srgb { red: 255, green: 133, blue: 149, standard: PhantomData },
+            5 => Srgb { red: 255, green: 128, blue: 161, standard: PhantomData },
+            6 => Srgb { red: 255, green: 177, blue: 173, standard: PhantomData },
+            7 => Srgb { red: 255, green: 219, blue: 229, standard: PhantomData },
+            _ => panic!("only 3 bits should be set"),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq)]
 enum FieldType {
     Air,
-    Sand,
+    Sand(SandColor),
     Wood,
     SandSource,
     BlackHole,
@@ -89,7 +118,7 @@ fn model(_app: &App) -> Model {
 #[inline]
 fn handle_mouse_interaction(app: &App, model: &mut Model) {
     let field_type_to_set: FieldType = if app.mouse.buttons.left().is_down() {
-        FieldType::Sand
+        FieldType::Sand(SandColor::new(model))
     } else if app.mouse.buttons.right().is_down() {
         FieldType::Air
     } else if app.mouse.buttons.middle().is_down() {
@@ -132,13 +161,14 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 FieldType::Wood => (),
                 FieldType::BlackHole => (),
                 FieldType::SandSource => {
+                    let color = SandColor::new(model);
                     if let Some(below) = model.get_mut(x, y_below) {
                         if *below == FieldType::Air {
-                            *below = FieldType::Sand;
+                            *below = FieldType::Sand(color);
                         }
                     }
                 }
-                FieldType::Sand => {
+                FieldType::Sand(d) => {
                     // sand can fall down
                     let left_first = model.get_random_bit();
 
@@ -156,7 +186,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                             }
                             if let Some(below) = model.get_mut(curr_x, y_below) {
                                 if *below == FieldType::Air {
-                                    *below = FieldType::Sand;
+                                    *below = FieldType::Sand(d);
                                     sand_has_fallen = true;
                                     break;
                                 }
@@ -194,7 +224,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
         for x in 0..GRID_WIDTH {
             let colour = match *model.get(x, y).unwrap() {
                 FieldType::Air => continue,
-                FieldType::Sand => DEEPPINK,
+                FieldType::Sand(b) => b.get_color(),
                 FieldType::Wood => BURLYWOOD,
                 FieldType::SandSource => PINK,
                 FieldType::BlackHole => DARKSLATEGRAY,
