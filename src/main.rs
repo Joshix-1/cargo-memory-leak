@@ -187,7 +187,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let draw = draw.x_y(display_rect.left(), display_rect.top());
 
     for y in 0..GRID_HEIGHT {
-        let y_coord = -<f32 as From<u16>>::from(y) * cell_size;
+        let draw = draw.y(-<f32 as From<u16>>::from(y) * cell_size);
         for x in 0..GRID_WIDTH {
             let colour = match *model.get(x, y).unwrap() {
                 FieldType::Air => continue,
@@ -200,8 +200,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             draw.rect()
                 .color(colour)
                 .w_h(cell_size, cell_size)
-                .x(<f32 as From<u16>>::from(x) * cell_size)
-                .y(y_coord);
+                .x(<f32 as From<u16>>::from(x) * cell_size);
         }
     }
 
