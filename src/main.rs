@@ -1,6 +1,8 @@
 use nannou::prelude::*;
 use nannou::winit::event::VirtualKeyCode;
 use std::cell::Ref;
+use std::fs::File;
+use std::io::{Read, Write};
 use std::marker::PhantomData;
 use std::mem::size_of;
 
@@ -17,8 +19,7 @@ type Row = [FieldType; GRID_WIDTH_USIZE];
 type Grid = [Row; GRID_HEIGHT_USIZE];
 
 fn main() {
-    eprintln!("Size of 1 field: {} bytes", size_of::<FieldType>());
-    eprintln!("Size of 1 grid:  {} bytes", size_of::<Grid>());
+    const _:() = assert!(size_of::<FieldType>() == 1);
     nannou::app(model).update(update).simple_window(view).run();
 }
 
@@ -74,6 +75,12 @@ enum FieldType {
     BlackHole,
 }
 
+impl FieldType {
+    fn to_byte(&self) -> u8 {
+        unsafe { *(self as *const FieldType as *const u8) }
+    }
+}
+
 struct Model {
     grid: Grid,
     state: u32,
@@ -111,6 +118,20 @@ impl Model {
         self.state = ((self.state & INV1) | bit).rotate_right(1);
         bit != 0
     }
+
+    unsafe fn from_bytes(data: [u8; GRID_WIDTH_USIZE * GRID_HEIGHT_USIZE]) -> Self {
+        Model {
+            grid: *(&data as *const [u8; GRID_WIDTH_USIZE * GRID_HEIGHT_USIZE] as *const Grid),
+            state: 0xACE1,
+        }
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.grid.iter()
+            .flat_map(|r| r.iter())
+            .map(|c| c.to_byte())
+            .collect()
+    }
 }
 
 #[inline]
@@ -131,11 +152,41 @@ fn get_cell_size_and_display_rect(window: Ref<Window>) -> (f32, Rect) {
 
 #[inline]
 fn model(_app: &App) -> Model {
-    Model::new()
+    try_read_data_from_save().unwrap_or_else(|| Model::new())
 }
+
+fn try_read_data_from_save() -> Option<Model> {
+    const DATA_SIZE: usize = GRID_WIDTH_USIZE * GRID_HEIGHT_USIZE;
+    if let Ok(mut file) = File::open(SAVE_FILE) {
+        let mut data: [u8; DATA_SIZE] = [0; DATA_SIZE];
+        if file.read(&mut data).ok()? != DATA_SIZE {
+            eprintln!("save.dat didn't contain {DATA_SIZE} bytes");
+            None
+        } else {
+            Some(unsafe { Model::from_bytes(data) })
+        }
+    } else {
+        None
+    }
+}
+
+const SAVE_FILE: &str = "save.dat";
 
 #[inline]
 fn handle_mouse_interaction(app: &App, model: &mut Model) {
+    unsafe {
+        static mut JUST_SAVED: bool = false;
+        if app.keys.mods.ctrl() && app.keys.down.contains(&VirtualKeyCode::S) {
+            if !JUST_SAVED {
+                File::create(SAVE_FILE).unwrap().write_all(&model.to_bytes()).unwrap();
+                println!("Written data to save.dat");
+                JUST_SAVED = true;
+                return;
+            }
+        } else {
+            JUST_SAVED = false;
+        }
+    }
     let field_type_to_set: FieldType = if app.mouse.buttons.left().is_down() {
         FieldType::Sand(SandColor::from_random_source(|| model.get_random_bit()))
     } else if app.mouse.buttons.right().is_down() {
