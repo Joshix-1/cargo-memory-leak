@@ -29,7 +29,7 @@ enum FieldType {
 
 struct Model {
     grid: Grid,
-    state: u16,
+    state: u32,
 }
 
 impl Model {
@@ -54,9 +54,12 @@ impl Model {
 
     #[inline]
     fn get_random_bit(&mut self) -> bool {
-        const INV1: u16 = 0u16.wrapping_sub(2);
+        // ~1
+        const INV1: u32 = 0u32.wrapping_sub(2);
+        // https://old.reddit.com/r/cryptography/comments/idftm3/having_trouble_understanding_the_fibonacci_lfsr/g294tqu/
+        const TAPS: u32 = (1 << 15) | (1 << 12) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 3) | (1 << 2) | (1 << 1);
         // https://en.wikipedia.org/wiki/Linear-feedback_shift_register#Fibonacci_LFSRs
-        let bit = (self.state & 0x2D).count_ones() as u16 & 1u16;
+        let bit = (self.state & TAPS).count_ones() & 1u32;
         self.state = ((self.state & INV1) | bit).rotate_right(1);
         bit != 0
     }
