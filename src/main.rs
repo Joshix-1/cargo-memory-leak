@@ -2,6 +2,7 @@ use nannou::prelude::*;
 use nannou::winit::event::VirtualKeyCode;
 use std::cell::Ref;
 use std::marker::PhantomData;
+use std::mem::size_of;
 
 const GRID_HEIGHT: u16 = 150;
 const GRID_WIDTH: u16 = (GRID_HEIGHT * 4) / 3;
@@ -16,6 +17,8 @@ type Row = [FieldType; GRID_WIDTH_USIZE];
 type Grid = [Row; GRID_HEIGHT_USIZE];
 
 fn main() {
+    eprintln!("Size of 1 field: {} bytes", size_of::<FieldType>());
+    eprintln!("Size of 1 grid:  {} bytes", size_of::<Grid>());
     nannou::app(model).update(update).simple_window(view).run();
 }
 
