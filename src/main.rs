@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::marker::PhantomData;
 use std::mem::size_of;
+use std::path::Path;
 
 const GRID_HEIGHT: u16 = 150;
 const GRID_WIDTH: u16 = (GRID_HEIGHT * 4) / 3;
@@ -20,7 +21,11 @@ type Grid = [Row; GRID_HEIGHT_USIZE];
 
 fn main() {
     const _: () = assert!(size_of::<FieldType>() == 1);
-    nannou::app(model).update(update).simple_window(view).run();
+    nannou::app(model)
+        .update(update)
+        .simple_window(view)
+        .event(handle_events)
+        .run();
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -153,12 +158,12 @@ fn get_cell_size_and_display_rect(window: Ref<Window>) -> (f32, Rect) {
 
 #[inline]
 fn model(_app: &App) -> Model {
-    try_read_data_from_save().unwrap_or_else(|| Model::new())
+    try_read_data_from_save(SAVE_FILE).unwrap_or_else(|| Model::new())
 }
 
-fn try_read_data_from_save() -> Option<Model> {
+fn try_read_data_from_save<P: AsRef<Path>>(file: P) -> Option<Model> {
     const DATA_SIZE: usize = GRID_WIDTH_USIZE * GRID_HEIGHT_USIZE;
-    if let Ok(mut file) = File::open(SAVE_FILE) {
+    if let Ok(mut file) = File::open(file) {
         let mut data: [u8; DATA_SIZE] = [0; DATA_SIZE];
         if file.read(&mut data).ok()? != DATA_SIZE {
             eprintln!("save.dat didn't contain {DATA_SIZE} bytes");
@@ -173,28 +178,42 @@ fn try_read_data_from_save() -> Option<Model> {
 
 const SAVE_FILE: &str = "save.dat";
 
+fn handle_events(_app: &App, model: &mut Model, event: Event) -> () {
+    match event {
+        Event::WindowEvent {
+            id: _,
+            simple: window_event,
+        } => match window_event {
+            Some(KeyReleased(key)) => match key {
+                VirtualKeyCode::S => {
+                    File::create(SAVE_FILE)
+                        .unwrap()
+                        .write_all(&model.to_bytes())
+                        .unwrap();
+                    println!("Written data to save.dat");
+                }
+                VirtualKeyCode::R => {
+                    model.grid = Model::new().grid;
+                }
+                _ => (),
+            },
+            Some(DroppedFile(path)) => {
+                let str = path.display().to_string();
+                if let Some(data) = try_read_data_from_save(path) {
+                    *model = data;
+                    eprintln!("Loaded data from file {str}")
+                } else {
+                    eprintln!("Invalid data in file {str}")
+                }
+            }
+            _ => (),
+        },
+        _ => (),
+    }
+}
+
 #[inline]
 fn handle_mouse_interaction(app: &App, model: &mut Model) {
-    unsafe {
-        static mut JUST_SAVED: bool = false;
-        if app.keys.mods.ctrl() && app.keys.down.contains(&VirtualKeyCode::S) {
-            if !JUST_SAVED {
-                File::create(SAVE_FILE)
-                    .unwrap()
-                    .write_all(&model.to_bytes())
-                    .unwrap();
-                println!("Written data to save.dat");
-                JUST_SAVED = true;
-                return;
-            }
-        } else {
-            JUST_SAVED = false;
-        }
-    }
-    if app.keys.mods.ctrl() && app.keys.down.contains(&VirtualKeyCode::R) {
-        model.grid = Model::new().grid;
-        return;
-    }
     let field_type_to_set: FieldType = if app.mouse.buttons.left().is_down() {
         FieldType::Sand(SandColor::from_random_source(|| model.get_random_bit()))
     } else if app.mouse.buttons.right().is_down() {
