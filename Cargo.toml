@@ -12,6 +12,10 @@ panic = "abort"
 strip = true
 lto = true
 opt-level = "z"
+overflow-checks = true
+
+[profile.release.package."*"]
+overflow-checks = false
 
 [dependencies]
 nannou = "0.19.0"
