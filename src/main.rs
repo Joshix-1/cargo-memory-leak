@@ -3,7 +3,7 @@ use nannou::winit::event::VirtualKeyCode;
 use std::cell::Ref;
 
 const GRID_HEIGHT: u16 = 150;
-const GRID_WIDTH: u16 = (GRID_HEIGHT * 16) / 9;
+const GRID_WIDTH: u16 = (GRID_HEIGHT * 4) / 3;
 
 const GRID_HEIGHT_USIZE: usize = GRID_HEIGHT as usize;
 const GRID_WIDTH_USIZE: usize = GRID_WIDTH as usize;
