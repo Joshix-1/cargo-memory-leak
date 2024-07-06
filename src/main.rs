@@ -38,21 +38,15 @@ enum SandColor {
 impl SandColor {
     #[inline]
     fn from_random_source<R: FnMut() -> bool>(mut get_random_bit: R) -> Self {
-        let mut byte: u8 = 0;
-        for _ in 0..3 {
-            byte <<= 1;
-            byte |= if get_random_bit() { 1 } else { 0 };
-        }
-        match byte {
-            0 => SandColor::Z,
-            1 => SandColor::P1,
-            2 => SandColor::P2,
-            3 => SandColor::P3,
-            4 => SandColor::P4,
-            5 => SandColor::P5,
-            6 => SandColor::P6,
-            7 => SandColor::P7,
-            _ => panic!("{byte:0b} should be a 3 bit number"),
+        match (get_random_bit(), get_random_bit(), get_random_bit()) {
+            (false, false, false) => SandColor::Z,
+            (false, false, true) => SandColor::P1,
+            (false, true, false) => SandColor::P2,
+            (false, true, true) => SandColor::P3,
+            (true, false, false) => SandColor::P4,
+            (true, false, true) => SandColor::P5,
+            (true, true, false) => SandColor::P6,
+            (true, true, true) => SandColor::P7,
         }
     }
 
