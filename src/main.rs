@@ -124,7 +124,7 @@ impl Model {
     fn to_bytes(&self) -> &[u8] {
         const _: () = assert!(size_of::<FieldType>() == size_of::<u8>());
         let data: &[[FieldType; GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE] = &self.grid;
-        const _: () = assert!(size_of::<Grid>() == GRID_WIDTH_USIZE * GRID_HEIGHT_USIZE);
+        const _: () = assert!(size_of::<Grid>() == GRID_HEIGHT_USIZE * GRID_WIDTH_USIZE);
         const _: () = assert!(size_of::<Grid>() < isize::MAX as usize);
         let data = data as *const Grid as *const u8;
         unsafe { slice::from_raw_parts(data, size_of::<Grid>()) }
@@ -153,14 +153,19 @@ fn model(_app: &App) -> Model {
 }
 
 fn try_read_data_from_save<P: AsRef<Path>>(file: P) -> Option<Model> {
-    const DATA_SIZE: usize = GRID_WIDTH_USIZE * GRID_HEIGHT_USIZE;
     if let Ok(mut file) = File::open(file) {
-        let mut data: [u8; DATA_SIZE] = [0; DATA_SIZE];
-        if file.read(&mut data).ok()? != DATA_SIZE {
-            eprintln!("save.dat didn't contain {DATA_SIZE} bytes");
+        let mut data: [u8; FIELD_COUNT] = [0; FIELD_COUNT];
+        if file.read(&mut data).ok()? != FIELD_COUNT {
+            eprintln!("{SAVE_FILE} didn't contain {FIELD_COUNT} bytes");
             None
         } else {
-            Some(unsafe { Model::from_bytes(data) })
+            let mut rest: [u8; 1] = [0; 1];
+            if file.read(&mut rest).ok()? != 0 {
+                eprintln!("{SAVE_FILE} is bigger than {FIELD_COUNT} bytes");
+                None
+            } else {
+                Some(unsafe { Model::from_bytes(data) })
+            }
         }
     } else {
         None
