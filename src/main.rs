@@ -1,6 +1,7 @@
 use nannou::prelude::*;
 use nannou::winit::event::VirtualKeyCode;
 use std::cell::Ref;
+use std::fmt::Debug;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::marker::PhantomData;
@@ -149,26 +150,39 @@ fn get_cell_size_and_display_rect(window: Ref<Window>) -> (f32, Rect) {
 
 #[inline]
 fn model(_app: &App) -> Model {
-    try_read_data_from_save(SAVE_FILE).unwrap_or_else(|| Model::new())
+    try_read_data_from_save(SAVE_FILE).unwrap_or_else(Model::new)
 }
 
-fn try_read_data_from_save<P: AsRef<Path>>(file: P) -> Option<Model> {
-    if let Ok(mut file) = File::open(file) {
-        let mut data: [u8; FIELD_COUNT] = [0; FIELD_COUNT];
-        if file.read(&mut data).ok()? != FIELD_COUNT {
-            eprintln!("{SAVE_FILE} didn't contain {FIELD_COUNT} bytes");
-            None
-        } else {
-            let mut rest: [u8; 1] = [0; 1];
-            if file.read(&mut rest).ok()? != 0 {
-                eprintln!("{SAVE_FILE} is bigger than {FIELD_COUNT} bytes");
-                None
-            } else {
-                Some(unsafe { Model::from_bytes(data) })
+fn try_read_data_from_save<P: AsRef<Path> + Debug + ?Sized>(file_path: &P) -> Option<Model> {
+    match File::open(file_path) {
+        Ok(mut file) => {
+            let mut data: [u8; FIELD_COUNT] = [0; FIELD_COUNT];
+            match file.read(&mut data) {
+                Err(err) => {
+                    eprintln!("Failed read from {file_path:?}: {err}");
+                    None
+                },
+                Ok(count) => {
+                    if count == FIELD_COUNT {
+                        let mut rest: [u8; 1] = [0; 1];
+                        if file.read(&mut rest).unwrap_or(0) > 0 {
+                            eprintln!("{file_path:?} is bigger than {FIELD_COUNT} bytes");
+                            None
+                        } else {
+                            eprintln!("Loaded data from {file_path:?}");
+                            Some(unsafe { Model::from_bytes(data) })
+                        }
+                    } else {
+                        eprintln!("{file_path:?} didn't contain {FIELD_COUNT} bytes");
+                        None
+                    }
+                },
             }
         }
-    } else {
-        None
+        Err(err) => {
+            eprintln!("Failed to open {file_path:?}: {err}");
+            None
+        }
     }
 }
 
@@ -190,18 +204,12 @@ fn handle_events(_app: &App, model: &mut Model, event: Event) -> () {
                         eprintln!("Written data to {SAVE_FILE}")
                     }
                 }
-                VirtualKeyCode::R => {
-                    model.grid = Model::new().grid;
-                }
+                VirtualKeyCode::R => model.grid = Model::new().grid,
                 _ => (),
             },
             Some(DroppedFile(path)) => {
-                let str = path.display().to_string();
-                if let Some(data) = try_read_data_from_save(path) {
-                    *model = data;
-                    eprintln!("Loaded data from file {str}")
-                } else {
-                    eprintln!("Invalid data in file {str}")
+                if let Some(data) = try_read_data_from_save(path.as_os_str()) {
+                    *model = data
                 }
             }
             _ => (),
