@@ -1,11 +1,18 @@
 use crate::field_type::{FieldType, SandColor};
-use crate::model::constants::{FIELD_COUNT, GRID_HEIGHT_USIZE, GRID_WIDTH_USIZE};
+use crate::model::constants::{FIELD_COUNT, GRID_HEIGHT, GRID_HEIGHT_USIZE, GRID_WIDTH, GRID_WIDTH_USIZE};
 use std::fmt::Debug;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::mem::size_of;
 use std::path::Path;
 use std::{io, slice};
+use std::cell::{Ref, RefCell};
+use std::ops::Deref;
+use std::rc::Rc;
+use nannou::color::{BLACK, BURLYWOOD, DARKGRAY, DARKSLATEGRAY, WHITE};
+use nannou::Draw;
+use nannou::window::Window;
+use crate::get_cell_size_and_display_rect;
 
 pub mod constants {
     pub const GRID_HEIGHT: u16 = 150;
@@ -22,23 +29,51 @@ pub mod constants {
 pub type Row = [FieldType; GRID_WIDTH_USIZE];
 pub type Grid = [Row; GRID_HEIGHT_USIZE];
 
+type WindowSize = (f32, f32);
+
 pub struct Model {
     grid: Grid,
+    old_grid: Rc<RefCell<Option<Grid>>>,
     state: u32,
+    last_window_size: Rc<RefCell<Option<WindowSize>>>,
+}
+
+impl Default for Model {
+    #[inline]
+    fn default() -> Self {
+        Model {
+            grid: [[FieldType::Air; GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE],
+            old_grid: Default::default(),
+            last_window_size: Default::default(),
+            state: 0xACE1,
+        }
+    }
 }
 
 impl Model {
     #[inline]
     pub fn new() -> Model {
-        Model {
-            grid: [[FieldType::Air; GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE],
-            state: 0xACE1,
-        }
+        Model::default()
     }
 
     #[inline]
     pub fn clear_grid(&mut self) {
+        *self.old_grid.borrow_mut() = Some(self.grid);
         self.grid = Model::new().grid;
+    }
+
+    pub fn force_redraw(&mut self) {
+        *self.old_grid.borrow_mut() =  None;
+    }
+
+    #[inline]
+    pub fn has_changed<T: Into<usize>>(&self, x: T, y: T) -> bool {
+        if let Some(old_grid) = self.old_grid.borrow().as_ref() {
+            let (x, y) = (x.into(), y.into());
+            old_grid.get(y).and_then(|row| row.get(x)) != self.get(x, y)
+        } else {
+            true
+        }
     }
 
     #[inline]
@@ -69,7 +104,7 @@ impl Model {
     unsafe fn from_bytes(data: [u8; FIELD_COUNT]) -> Self {
         Model {
             grid: *(&data as *const [u8; FIELD_COUNT] as *const Grid),
-            state: 0xACE1,
+            ..Default::default()
         }
     }
 
@@ -181,5 +216,53 @@ impl Model {
                 };
             }
         }
+    }
+
+    pub fn draw(&self, window: Ref<Window>, draw: &Draw) {
+        let force_redraw = {
+            if self.old_grid.borrow().as_ref() == None {
+                true
+            } else {
+                let window_size: Option<WindowSize> = Some(window.inner_size_points());
+                if window_size.eq(self.last_window_size.borrow().deref()) {
+                    false
+                } else {
+                    *self.last_window_size.borrow_mut() = window_size;
+                    true
+                }
+            }
+        };
+        if force_redraw {
+            draw.background().color(DARKGRAY);
+        }
+        let (cell_size, display_rect) = get_cell_size_and_display_rect(window);
+
+        let draw = draw.x_y(
+            display_rect.left() + cell_size / 2f32,
+            display_rect.top() - cell_size / 2f32,
+        );
+
+        for y in 0..GRID_HEIGHT {
+            let draw = draw.y(-<f32 as From<u16>>::from(y) * cell_size);
+            for x in 0..GRID_WIDTH {
+                if !force_redraw && !self.has_changed(x, y) {
+                    continue;
+                }
+                let colour = match *self.get(x, y).unwrap() {
+                    FieldType::Air => BLACK,
+                    FieldType::Sand(b) => b.get_color(),
+                    FieldType::Wood => BURLYWOOD,
+                    FieldType::SandSource => WHITE,
+                    FieldType::BlackHole => DARKSLATEGRAY,
+                };
+
+                draw.rect()
+                    .color(colour)
+                    .w_h(cell_size, cell_size)
+                    .x(<f32 as From<u16>>::from(x) * cell_size);
+            }
+        };
+
+        *self.old_grid.borrow_mut() = Some(self.grid);
     }
 }

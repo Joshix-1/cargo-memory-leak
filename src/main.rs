@@ -5,8 +5,7 @@ use crate::field_type::{FieldType, SandColor};
 
 use crate::model::constants::*;
 use crate::model::Model;
-use nannou::color::{BLACK, BURLYWOOD, DARKGRAY, DARKSLATEGRAY, WHITE};
-use nannou::event::Update;
+use nannou::event::WindowEvent;
 use nannou::geom::Rect;
 use nannou::prelude::{DroppedFile, KeyReleased, ToPrimitive};
 use nannou::window::Window;
@@ -16,7 +15,6 @@ use std::cell::Ref;
 
 fn main() {
     nannou::app(model)
-        .update(update)
         .simple_window(view)
         .event(handle_events)
         .run();
@@ -45,12 +43,12 @@ fn model(_app: &App) -> Model {
     Model::try_read_from_save(SAVE_FILE).unwrap_or_else(Model::new)
 }
 
-fn handle_events(_app: &App, model: &mut Model, event: Event) {
-    if let Event::WindowEvent {
-        id: _,
-        simple: window_event,
-    } = event
-    {
+fn handle_events(app: &App, model: &mut Model, event: Event) {
+    match event {
+        Event::WindowEvent {
+            id: _,
+            simple: window_event,
+        } =>
         match window_event {
             Some(KeyReleased(key)) => match key {
                 VirtualKeyCode::S => {
@@ -67,9 +65,18 @@ fn handle_events(_app: &App, model: &mut Model, event: Event) {
                 if let Some(data) = Model::try_read_from_save(path.as_os_str()) {
                     *model = data
                 }
-            }
+            },
+            Some(WindowEvent::Resized(_)) => {
+                model.force_redraw()
+            },
             _ => (),
-        }
+        },
+        Event::Update(_) => {
+            model.update();
+
+            handle_mouse_interaction(app, model);
+        },
+        _ => (),
     }
 }
 
@@ -107,44 +114,10 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
     }
 }
 
-#[inline]
-fn update(app: &App, model: &mut Model, _update: Update) {
-    model.update();
-
-    handle_mouse_interaction(app, model);
-}
-
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
 
-    draw.background().color(DARKGRAY);
-
-    let (cell_size, display_rect) = get_cell_size_and_display_rect(app.main_window());
-
-    draw.rect().color(BLACK).wh(display_rect.wh());
-
-    let draw = draw.x_y(
-        display_rect.left() + cell_size / 2f32,
-        display_rect.top() - cell_size / 2f32,
-    );
-
-    for y in 0..GRID_HEIGHT {
-        let draw = draw.y(-<f32 as From<u16>>::from(y) * cell_size);
-        for x in 0..GRID_WIDTH {
-            let colour = match *model.get(x, y).unwrap() {
-                FieldType::Air => continue,
-                FieldType::Sand(b) => b.get_color(),
-                FieldType::Wood => BURLYWOOD,
-                FieldType::SandSource => WHITE,
-                FieldType::BlackHole => DARKSLATEGRAY,
-            };
-
-            draw.rect()
-                .color(colour)
-                .w_h(cell_size, cell_size)
-                .x(<f32 as From<u16>>::from(x) * cell_size);
-        }
-    }
+    model.draw(app.main_window(), &draw);
 
     draw.to_frame(app, &frame).unwrap();
 

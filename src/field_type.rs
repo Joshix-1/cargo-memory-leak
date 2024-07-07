@@ -39,8 +39,9 @@ impl SandColor {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Default)]
 pub enum FieldType {
+    #[default]
     Air,
     Sand(SandColor),
     Wood,
