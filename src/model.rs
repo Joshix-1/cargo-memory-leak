@@ -37,7 +37,7 @@ impl Model {
     }
 
     #[inline]
-    pub fn clear_grid(&mut self) -> () {
+    pub fn clear_grid(&mut self) {
         self.grid = Model::new().grid;
     }
 

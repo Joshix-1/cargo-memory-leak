@@ -13,11 +13,7 @@ use nannou::window::Window;
 use nannou::winit::event::VirtualKeyCode;
 use nannou::{App, Event, Frame};
 use std::cell::Ref;
-use std::fmt::Debug;
-use std::fs::File;
-use std::io::{Read, Write};
 use std::mem::size_of;
-use std::path::Path;
 
 fn main() {
     const _: () = assert!(size_of::<FieldType>() == 1);
@@ -51,12 +47,13 @@ fn model(_app: &App) -> Model {
     Model::try_read_from_save(SAVE_FILE).unwrap_or_else(Model::new)
 }
 
-fn handle_events(_app: &App, model: &mut Model, event: Event) -> () {
-    match event {
-        Event::WindowEvent {
-            id: _,
-            simple: window_event,
-        } => match window_event {
+fn handle_events(_app: &App, model: &mut Model, event: Event) {
+    if let Event::WindowEvent {
+        id: _,
+        simple: window_event,
+    } = event
+    {
+        match window_event {
             Some(KeyReleased(key)) => match key {
                 VirtualKeyCode::S => {
                     if let Err(err) = model.write_to_file(SAVE_FILE) {
@@ -74,8 +71,7 @@ fn handle_events(_app: &App, model: &mut Model, event: Event) -> () {
                 }
             }
             _ => (),
-        },
-        _ => (),
+        }
     }
 }
 
@@ -138,7 +134,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                         if *below == FieldType::Air {
                             *below = FieldType::Sand(d);
                             true
-                        } else  {
+                        } else {
                             *below == FieldType::BlackHole
                         }
                     } else {
