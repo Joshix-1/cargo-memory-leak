@@ -1,18 +1,20 @@
-use crate::field_type::{FieldType, SandColor};
-use crate::model::constants::{FIELD_COUNT, GRID_HEIGHT, GRID_HEIGHT_USIZE, GRID_WIDTH, GRID_WIDTH_USIZE};
+use crate::field_type::FieldType;
+use crate::get_cell_size_and_display_rect;
+use crate::model::constants::{
+    FIELD_COUNT, GRID_HEIGHT, GRID_HEIGHT_USIZE, GRID_WIDTH, GRID_WIDTH_USIZE,
+};
+use nannou::color::DARKGRAY;
+use nannou::window::Window;
+use nannou::Draw;
+use std::cell::{Ref, RefCell};
 use std::fmt::Debug;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::mem::size_of;
-use std::path::Path;
-use std::{io, slice};
-use std::cell::{Ref, RefCell};
 use std::ops::Deref;
+use std::path::Path;
 use std::rc::Rc;
-use nannou::color::{BLACK, BURLYWOOD, DARKGRAY, DARKSLATEGRAY, WHITE};
-use nannou::Draw;
-use nannou::window::Window;
-use crate::get_cell_size_and_display_rect;
+use std::{io, slice};
 
 pub mod constants {
     pub const GRID_HEIGHT: u16 = 150;
@@ -52,18 +54,13 @@ impl Default for Model {
 
 impl Model {
     #[inline]
-    pub fn new() -> Model {
-        Model::default()
-    }
-
-    #[inline]
     pub fn clear_grid(&mut self) {
         *self.old_grid.borrow_mut() = Some(self.grid);
-        self.grid = Model::new().grid;
+        self.grid = Model::default().grid;
     }
 
     pub fn force_redraw(&mut self) {
-        *self.old_grid.borrow_mut() =  None;
+        *self.old_grid.borrow_mut() = None;
     }
 
     #[inline]
@@ -163,23 +160,31 @@ impl Model {
             let revert = self.get_random_bit();
             for x in 0..GRID_WIDTH_USIZE {
                 let x = if revert { GRID_WIDTH_USIZE - 1 - x } else { x };
-                match *self.get(x, y).unwrap() {
+                let field_type = *self.get(x, y).unwrap();
+                match field_type {
                     FieldType::Air => (),
                     FieldType::Wood => (),
                     FieldType::BlackHole => (),
                     FieldType::SandSource => {
-                        let color = SandColor::from_random_source(|| self.get_random_bit());
-                        if let Some(below) = self.get_mut(x, y_below) {
+                        if let Some(below) = self.get(x, y_below) {
                             if *below == FieldType::Air {
-                                *below = FieldType::Sand(color);
+                                *self.get_mut(x, y_below).unwrap() =
+                                    FieldType::sand_from_random_source(|| self.get_random_bit());
                             }
                         }
                     }
-                    FieldType::Sand(d) => {
+                    FieldType::SandC0
+                    | FieldType::SandC1
+                    | FieldType::SandC2
+                    | FieldType::SandC3
+                    | FieldType::SandC4
+                    | FieldType::SandC5
+                    | FieldType::SandC6
+                    | FieldType::SandC7 => {
                         // sand can fall down
                         if if let Some(below) = self.get_mut(x, y_below) {
                             if *below == FieldType::Air {
-                                *below = FieldType::Sand(d);
+                                *below = field_type;
                                 true
                             } else {
                                 *below == FieldType::BlackHole
@@ -200,7 +205,7 @@ impl Model {
                                     }
                                     if let Some(below) = self.get(curr_x, y_below) {
                                         if *below == FieldType::Air {
-                                            *self.get_mut(curr_x, y).unwrap() = FieldType::Sand(d);
+                                            *self.get_mut(curr_x, y).unwrap() = field_type;
                                             *self.get_mut(x, y).unwrap() = FieldType::Air;
                                             break;
                                         }
@@ -223,7 +228,7 @@ impl Model {
             return false;
         }
         let force_redraw = {
-            if self.old_grid.borrow().as_ref() == None {
+            if self.old_grid.borrow().as_ref().is_none() {
                 true
             } else {
                 let window_size: Option<WindowSize> = Some(window.inner_size_points());
@@ -251,20 +256,14 @@ impl Model {
                 if !force_redraw && !self.has_changed(x, y) {
                     continue;
                 }
-                let colour = match *self.get(x, y).unwrap() {
-                    FieldType::Air => BLACK,
-                    FieldType::Sand(b) => b.get_colour(),
-                    FieldType::Wood => BURLYWOOD,
-                    FieldType::SandSource => WHITE,
-                    FieldType::BlackHole => DARKSLATEGRAY,
-                };
+                let colour = self.get(x, y).unwrap().get_colour();
 
                 draw.rect()
                     .color(colour)
                     .w_h(cell_size, cell_size)
                     .x(<f32 as From<u16>>::from(x) * cell_size);
             }
-        };
+        }
 
         *self.old_grid.borrow_mut() = Some(self.grid);
 

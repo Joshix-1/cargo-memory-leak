@@ -1,7 +1,7 @@
 mod field_type;
 mod model;
 
-use crate::field_type::{FieldType, SandColor};
+use crate::field_type::FieldType;
 
 use crate::model::constants::*;
 use crate::model::Model;
@@ -40,7 +40,7 @@ fn get_cell_size_and_display_rect(window: Ref<Window>) -> (f32, Rect) {
 
 #[inline]
 fn model(_app: &App) -> Model {
-    Model::try_read_from_save(SAVE_FILE).unwrap_or_else(Model::new)
+    Model::try_read_from_save(SAVE_FILE).unwrap_or_default()
 }
 
 fn handle_events(app: &App, model: &mut Model, event: Event) {
@@ -48,8 +48,7 @@ fn handle_events(app: &App, model: &mut Model, event: Event) {
         Event::WindowEvent {
             id: _,
             simple: window_event,
-        } =>
-        match window_event {
+        } => match window_event {
             Some(KeyReleased(key)) => match key {
                 VirtualKeyCode::S => {
                     if let Err(err) = model.write_to_file(SAVE_FILE) {
@@ -65,17 +64,15 @@ fn handle_events(app: &App, model: &mut Model, event: Event) {
                 if let Some(data) = Model::try_read_from_save(path.as_os_str()) {
                     *model = data
                 }
-            },
-            Some(WindowEvent::Resized(_)) => {
-                model.force_redraw()
-            },
+            }
+            Some(WindowEvent::Resized(_)) => model.force_redraw(),
             _ => (),
         },
         Event::Update(_) => {
             model.update();
 
             handle_mouse_interaction(app, model);
-        },
+        }
         _ => (),
     }
 }
@@ -83,7 +80,7 @@ fn handle_events(app: &App, model: &mut Model, event: Event) {
 #[inline]
 fn handle_mouse_interaction(app: &App, model: &mut Model) {
     let field_type_to_set: FieldType = if app.mouse.buttons.left().is_down() {
-        FieldType::Sand(SandColor::from_random_source(|| model.get_random_bit()))
+        FieldType::sand_from_random_source(|| model.get_random_bit())
     } else if app.mouse.buttons.right().is_down() {
         FieldType::Air
     } else if app.mouse.buttons.middle().is_down() {

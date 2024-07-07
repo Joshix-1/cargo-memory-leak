@@ -1,52 +1,52 @@
-use nannou::color::Srgb;
+use nannou::color::{Srgb, BLACK, BURLYWOOD, DARKSLATEGRAY, WHITE};
 use std::marker::PhantomData;
 use std::mem::size_of;
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Default)]
+#[repr(u8)]
 #[rustfmt::skip]
-pub enum SandColor {
-    C0, C1, C2, C3,
-    C4, C5, C6, C7,
+pub enum FieldType {
+    SandC0 = 0, SandC1 = 1, SandC2 = 2, SandC3 = 3,
+    SandC4 = 4, SandC5 = 5, SandC6 = 6, SandC7 = 7,
+    #[default]
+    Air = 8,
+    Wood = 10,
+    SandSource = 11,
+    BlackHole = 12,
 }
 
-impl SandColor {
+const _: () = assert!(size_of::<FieldType>() == 1);
+
+impl FieldType {
     #[inline]
-    pub fn from_random_source<R: FnMut() -> bool>(mut get_random_bit: R) -> Self {
+    pub fn sand_from_random_source<R: FnMut() -> bool>(mut get_random_bit: R) -> Self {
         match (get_random_bit(), get_random_bit(), get_random_bit()) {
-            (false, false, false) => SandColor::C0,
-            (false, false, true) => SandColor::C1,
-            (false, true, false) => SandColor::C2,
-            (false, true, true) => SandColor::C3,
-            (true, false, false) => SandColor::C4,
-            (true, false, true) => SandColor::C5,
-            (true, true, false) => SandColor::C6,
-            (true, true, true) => SandColor::C7,
+            (false, false, false) => FieldType::SandC0,
+            (false, false, true) => FieldType::SandC1,
+            (false, true, false) => FieldType::SandC2,
+            (false, true, true) => FieldType::SandC3,
+            (true, false, false) => FieldType::SandC4,
+            (true, false, true) => FieldType::SandC5,
+            (true, true, false) => FieldType::SandC6,
+            (true, true, true) => FieldType::SandC7,
         }
     }
 
     #[rustfmt::skip]
     pub const fn get_colour(&self) -> Srgb<u8> {
         match self {
-            SandColor::C0 => Srgb { red: 255, green: 20, blue: 147, standard: PhantomData },
-            SandColor::C1 => Srgb { red: 255, green: 102, blue: 179, standard: PhantomData },
-            SandColor::C2 => Srgb { red: 255, green: 163, blue: 194, standard: PhantomData },
-            SandColor::C3 => Srgb { red: 255, green: 77, blue: 148, standard: PhantomData },
-            SandColor::C4 => Srgb { red: 255, green: 133, blue: 149, standard: PhantomData },
-            SandColor::C5 => Srgb { red: 255, green: 128, blue: 161, standard: PhantomData },
-            SandColor::C6 => Srgb { red: 255, green: 177, blue: 173, standard: PhantomData },
-            SandColor::C7 => Srgb { red: 255, green: 219, blue: 229, standard: PhantomData },
+            FieldType::SandC0 => Srgb { red: 255, green: 20, blue: 147, standard: PhantomData },
+            FieldType::SandC1 => Srgb { red: 255, green: 102, blue: 179, standard: PhantomData },
+            FieldType::SandC2 => Srgb { red: 255, green: 163, blue: 194, standard: PhantomData },
+            FieldType::SandC3 => Srgb { red: 255, green: 77, blue: 148, standard: PhantomData },
+            FieldType::SandC4 => Srgb { red: 255, green: 133, blue: 149, standard: PhantomData },
+            FieldType::SandC5 => Srgb { red: 255, green: 128, blue: 161, standard: PhantomData },
+            FieldType::SandC6 => Srgb { red: 255, green: 177, blue: 173, standard: PhantomData },
+            FieldType::SandC7 => Srgb { red: 255, green: 219, blue: 229, standard: PhantomData },
+            FieldType::Air => BLACK,
+            FieldType::Wood => BURLYWOOD,
+            FieldType::SandSource => WHITE,
+            FieldType::BlackHole => DARKSLATEGRAY,
         }
     }
 }
-
-#[derive(Copy, Clone, Eq, PartialEq, Default)]
-pub enum FieldType {
-    #[default]
-    Air,
-    Sand(SandColor),
-    Wood,
-    SandSource,
-    BlackHole,
-}
-
-const _: () = assert!(size_of::<FieldType>() == 1);
