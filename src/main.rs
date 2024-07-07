@@ -13,10 +13,8 @@ use nannou::window::Window;
 use nannou::winit::event::VirtualKeyCode;
 use nannou::{App, Event, Frame};
 use std::cell::Ref;
-use std::mem::size_of;
 
 fn main() {
-    const _: () = assert!(size_of::<FieldType>() == 1);
     nannou::app(model)
         .update(update)
         .simple_window(view)

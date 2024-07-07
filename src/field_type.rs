@@ -1,5 +1,6 @@
 use nannou::color::Srgb;
 use std::marker::PhantomData;
+use std::mem::size_of;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 #[rustfmt::skip]
@@ -46,3 +47,5 @@ pub enum FieldType {
     SandSource,
     BlackHole,
 }
+
+const _: () = assert!(size_of::<FieldType>() == 1);
