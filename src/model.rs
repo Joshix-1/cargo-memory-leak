@@ -1,7 +1,11 @@
 use crate::field_type::FieldType;
 use crate::model::constants::{FIELD_COUNT, GRID_HEIGHT_USIZE, GRID_WIDTH_USIZE};
+use std::fmt::Debug;
+use std::fs::File;
+use std::io::{Read, Write};
 use std::mem::size_of;
-use std::slice;
+use std::path::Path;
+use std::{io, slice};
 
 pub mod constants {
     pub const GRID_HEIGHT: u16 = 150;
@@ -62,19 +66,58 @@ impl Model {
         bit != 0
     }
 
-    pub(crate) unsafe fn from_bytes(data: [u8; FIELD_COUNT]) -> Self {
+    unsafe fn from_bytes(data: [u8; FIELD_COUNT]) -> Self {
         Model {
             grid: *(&data as *const [u8; FIELD_COUNT] as *const Grid),
             state: 0xACE1,
         }
     }
 
-    pub(crate) fn to_bytes(&self) -> &[u8] {
+    fn to_bytes(&self) -> &[u8] {
         const _: () = assert!(size_of::<FieldType>() == size_of::<u8>());
         let data: &[[FieldType; GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE] = &self.grid;
         const _: () = assert!(size_of::<Grid>() == GRID_HEIGHT_USIZE * GRID_WIDTH_USIZE);
         const _: () = assert!(size_of::<Grid>() < isize::MAX as usize);
         let data = data as *const Grid as *const u8;
         unsafe { slice::from_raw_parts(data, size_of::<Grid>()) }
+    }
+
+    pub(crate) fn write_to_file<P: AsRef<Path> + ?Sized>(&self, file_path: &P) -> io::Result<()> {
+        File::create(file_path)?.write_all(self.to_bytes())
+    }
+
+    pub(crate) fn try_read_from_save<P: AsRef<Path> + Debug + ?Sized>(
+        file_path: &P,
+    ) -> Option<Self> {
+        match File::open(file_path) {
+            Ok(mut file) => {
+                let mut data: [u8; FIELD_COUNT] = [0; FIELD_COUNT];
+                match file.read(&mut data) {
+                    Err(err) => {
+                        eprintln!("Failed read from {file_path:?}: {err}");
+                        None
+                    }
+                    Ok(count) => {
+                        if count == FIELD_COUNT {
+                            let mut rest: [u8; 1] = [0; 1];
+                            if file.read(&mut rest).unwrap_or(0) > 0 {
+                                eprintln!("{file_path:?} is bigger than {FIELD_COUNT} bytes");
+                                None
+                            } else {
+                                eprintln!("Loaded data from {file_path:?}");
+                                Some(unsafe { Model::from_bytes(data) })
+                            }
+                        } else {
+                            eprintln!("{file_path:?} didn't contain {FIELD_COUNT} bytes");
+                            None
+                        }
+                    }
+                }
+            }
+            Err(err) => {
+                eprintln!("Failed to open {file_path:?}: {err}");
+                None
+            }
+        }
     }
 }

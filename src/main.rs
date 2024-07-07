@@ -28,6 +28,8 @@ fn main() {
         .run();
 }
 
+const SAVE_FILE: &str = "save.dat";
+
 #[inline]
 fn get_cell_size_and_display_rect(window: Ref<Window>) -> (f32, Rect) {
     let cell_size = {
@@ -46,43 +48,8 @@ fn get_cell_size_and_display_rect(window: Ref<Window>) -> (f32, Rect) {
 
 #[inline]
 fn model(_app: &App) -> Model {
-    try_read_data_from_save(SAVE_FILE).unwrap_or_else(Model::new)
+    Model::try_read_from_save(SAVE_FILE).unwrap_or_else(Model::new)
 }
-
-fn try_read_data_from_save<P: AsRef<Path> + Debug + ?Sized>(file_path: &P) -> Option<Model> {
-    match File::open(file_path) {
-        Ok(mut file) => {
-            let mut data: [u8; FIELD_COUNT] = [0; FIELD_COUNT];
-            match file.read(&mut data) {
-                Err(err) => {
-                    eprintln!("Failed read from {file_path:?}: {err}");
-                    None
-                }
-                Ok(count) => {
-                    if count == FIELD_COUNT {
-                        let mut rest: [u8; 1] = [0; 1];
-                        if file.read(&mut rest).unwrap_or(0) > 0 {
-                            eprintln!("{file_path:?} is bigger than {FIELD_COUNT} bytes");
-                            None
-                        } else {
-                            eprintln!("Loaded data from {file_path:?}");
-                            Some(unsafe { Model::from_bytes(data) })
-                        }
-                    } else {
-                        eprintln!("{file_path:?} didn't contain {FIELD_COUNT} bytes");
-                        None
-                    }
-                }
-            }
-        }
-        Err(err) => {
-            eprintln!("Failed to open {file_path:?}: {err}");
-            None
-        }
-    }
-}
-
-const SAVE_FILE: &str = "save.dat";
 
 fn handle_events(_app: &App, model: &mut Model, event: Event) -> () {
     match event {
@@ -92,9 +59,7 @@ fn handle_events(_app: &App, model: &mut Model, event: Event) -> () {
         } => match window_event {
             Some(KeyReleased(key)) => match key {
                 VirtualKeyCode::S => {
-                    if let Err(err) = File::create(SAVE_FILE)
-                        .and_then(|mut file| file.write_all(&model.to_bytes()))
-                    {
+                    if let Err(err) = model.write_to_file(SAVE_FILE) {
                         eprintln!("Failed to write to {SAVE_FILE}: {err}")
                     } else {
                         eprintln!("Written data to {SAVE_FILE}")
@@ -104,7 +69,7 @@ fn handle_events(_app: &App, model: &mut Model, event: Event) -> () {
                 _ => (),
             },
             Some(DroppedFile(path)) => {
-                if let Some(data) = try_read_data_from_save(path.as_os_str()) {
+                if let Some(data) = Model::try_read_from_save(path.as_os_str()) {
                     *model = data
                 }
             }
@@ -173,10 +138,8 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                         if *below == FieldType::Air {
                             *below = FieldType::Sand(d);
                             true
-                        } else if *below == FieldType::BlackHole {
-                            true
-                        } else {
-                            false
+                        } else  {
+                            *below == FieldType::BlackHole
                         }
                     } else {
                         false
