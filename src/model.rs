@@ -250,7 +250,7 @@ impl Model {
                 }
                 let colour = match *self.get(x, y).unwrap() {
                     FieldType::Air => BLACK,
-                    FieldType::Sand(b) => b.get_color(),
+                    FieldType::Sand(b) => b.get_colour(),
                     FieldType::Wood => BURLYWOOD,
                     FieldType::SandSource => WHITE,
                     FieldType::BlackHole => DARKSLATEGRAY,

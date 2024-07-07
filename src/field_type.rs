@@ -25,7 +25,7 @@ impl SandColor {
     }
 
     #[rustfmt::skip]
-    pub const fn get_color(&self) -> Srgb<u8> {
+    pub const fn get_colour(&self) -> Srgb<u8> {
         match self {
             SandColor::C0 => Srgb { red: 255, green: 20, blue: 147, standard: PhantomData },
             SandColor::C1 => Srgb { red: 255, green: 102, blue: 179, standard: PhantomData },
