@@ -6,12 +6,14 @@ use std::io::{Read, Write};
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::path::Path;
+use std::slice;
 
 const GRID_HEIGHT: u16 = 150;
 const GRID_WIDTH: u16 = (GRID_HEIGHT * 4) / 3;
 
 const GRID_HEIGHT_USIZE: usize = GRID_HEIGHT as usize;
 const GRID_WIDTH_USIZE: usize = GRID_WIDTH as usize;
+const FIELD_COUNT: usize = GRID_HEIGHT_USIZE * GRID_WIDTH_USIZE;
 
 const GRID_HEIGHT_F32: f32 = GRID_HEIGHT as f32;
 const GRID_WIDTH_F32: f32 = GRID_WIDTH as f32;
@@ -74,12 +76,6 @@ enum FieldType {
     BlackHole,
 }
 
-impl FieldType {
-    fn to_byte(&self) -> u8 {
-        unsafe { *(self as *const FieldType as *const u8) }
-    }
-}
-
 struct Model {
     grid: Grid,
     state: u32,
@@ -118,19 +114,20 @@ impl Model {
         bit != 0
     }
 
-    unsafe fn from_bytes(data: [u8; GRID_WIDTH_USIZE * GRID_HEIGHT_USIZE]) -> Self {
+    unsafe fn from_bytes(data: [u8; FIELD_COUNT]) -> Self {
         Model {
-            grid: *(&data as *const [u8; GRID_WIDTH_USIZE * GRID_HEIGHT_USIZE] as *const Grid),
+            grid: *(&data as *const [u8; FIELD_COUNT] as *const Grid),
             state: 0xACE1,
         }
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.grid
-            .iter()
-            .flat_map(|r| r.iter())
-            .map(|c| c.to_byte())
-            .collect()
+    fn to_bytes(&self) -> &[u8] {
+        const _: () = assert!(size_of::<FieldType>() == size_of::<u8>());
+        let data: &[[FieldType; GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE] = &self.grid;
+        const _: () = assert!(size_of::<Grid>() == GRID_WIDTH_USIZE * GRID_HEIGHT_USIZE);
+        const _: () = assert!(size_of::<Grid>() < isize::MAX as usize);
+        let data = data as *const Grid as *const u8;
+        unsafe { slice::from_raw_parts(data, size_of::<Grid>()) }
     }
 }
 
