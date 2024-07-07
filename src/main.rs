@@ -1,4 +1,11 @@
-use nannou::color::{Srgb, BLACK, BURLYWOOD, DARKGRAY, DARKSLATEGRAY, WHITE};
+mod field_type;
+mod model;
+
+use crate::field_type::{FieldType, SandColor};
+
+use crate::model::constants::*;
+use crate::model::Model;
+use nannou::color::{BLACK, BURLYWOOD, DARKGRAY, DARKSLATEGRAY, WHITE};
 use nannou::event::Update;
 use nannou::geom::Rect;
 use nannou::prelude::{DroppedFile, KeyReleased, ToPrimitive};
@@ -9,23 +16,8 @@ use std::cell::Ref;
 use std::fmt::Debug;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::marker::PhantomData;
 use std::mem::size_of;
 use std::path::Path;
-use std::slice;
-
-const GRID_HEIGHT: u16 = 150;
-const GRID_WIDTH: u16 = (GRID_HEIGHT * 4) / 3;
-
-const GRID_HEIGHT_USIZE: usize = GRID_HEIGHT as usize;
-const GRID_WIDTH_USIZE: usize = GRID_WIDTH as usize;
-const FIELD_COUNT: usize = GRID_HEIGHT_USIZE * GRID_WIDTH_USIZE;
-
-const GRID_HEIGHT_F32: f32 = GRID_HEIGHT as f32;
-const GRID_WIDTH_F32: f32 = GRID_WIDTH as f32;
-
-type Row = [FieldType; GRID_WIDTH_USIZE];
-type Grid = [Row; GRID_HEIGHT_USIZE];
 
 fn main() {
     const _: () = assert!(size_of::<FieldType>() == 1);
@@ -34,107 +26,6 @@ fn main() {
         .simple_window(view)
         .event(handle_events)
         .run();
-}
-
-#[derive(Copy, Clone, Eq, PartialEq)]
-#[rustfmt::skip]
-enum SandColor {
-    C0, C1, C2, C3,
-    C4, C5, C6, C7,
-}
-
-impl SandColor {
-    #[inline]
-    fn from_random_source<R: FnMut() -> bool>(mut get_random_bit: R) -> Self {
-        match (get_random_bit(), get_random_bit(), get_random_bit()) {
-            (false, false, false) => SandColor::C0,
-            (false, false, true) => SandColor::C1,
-            (false, true, false) => SandColor::C2,
-            (false, true, true) => SandColor::C3,
-            (true, false, false) => SandColor::C4,
-            (true, false, true) => SandColor::C5,
-            (true, true, false) => SandColor::C6,
-            (true, true, true) => SandColor::C7,
-        }
-    }
-
-    #[rustfmt::skip]
-    const fn get_color(&self) -> Srgb<u8> {
-        match self {
-            SandColor::C0 => Srgb { red: 255, green: 20, blue: 147, standard: PhantomData },
-            SandColor::C1 => Srgb { red: 255, green: 102, blue: 179, standard: PhantomData },
-            SandColor::C2 => Srgb { red: 255, green: 163, blue: 194, standard: PhantomData },
-            SandColor::C3 => Srgb { red: 255, green: 77, blue: 148, standard: PhantomData },
-            SandColor::C4 => Srgb { red: 255, green: 133, blue: 149, standard: PhantomData },
-            SandColor::C5 => Srgb { red: 255, green: 128, blue: 161, standard: PhantomData },
-            SandColor::C6 => Srgb { red: 255, green: 177, blue: 173, standard: PhantomData },
-            SandColor::C7 => Srgb { red: 255, green: 219, blue: 229, standard: PhantomData },
-        }
-    }
-}
-
-#[derive(Copy, Clone, Eq, PartialEq)]
-enum FieldType {
-    Air,
-    Sand(SandColor),
-    Wood,
-    SandSource,
-    BlackHole,
-}
-
-struct Model {
-    grid: Grid,
-    state: u32,
-}
-
-impl Model {
-    fn new() -> Model {
-        Model {
-            grid: [[FieldType::Air; GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE],
-            state: 0xACE1,
-        }
-    }
-
-    #[inline]
-    fn get<T: Into<usize>>(&self, x: T, y: T) -> Option<&FieldType> {
-        self.grid.get(y.into()).and_then(|row| row.get(x.into()))
-    }
-
-    #[inline]
-    fn get_mut<T: Into<usize>>(&mut self, x: T, y: T) -> Option<&mut FieldType> {
-        self.grid
-            .get_mut(y.into())
-            .and_then(|row| row.get_mut(x.into()))
-    }
-
-    #[inline]
-    fn get_random_bit(&mut self) -> bool {
-        // ~1
-        const INV1: u32 = 0u32.wrapping_sub(2);
-        // https://old.reddit.com/r/cryptography/comments/idftm3/having_trouble_understanding_the_fibonacci_lfsr/g294tqu/
-        const TAPS: u32 =
-            (1 << 15) | (1 << 12) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 3) | (1 << 2) | (1 << 1);
-        // https://en.wikipedia.org/wiki/Linear-feedback_shift_register#Fibonacci_LFSRs
-        let bit = (self.state & TAPS).count_ones() & 1u32;
-        self.state = ((self.state & INV1) | bit).rotate_right(1);
-        bit != 0
-    }
-
-    unsafe fn from_bytes(data: [u8; FIELD_COUNT]) -> Self {
-        Model {
-            grid: *(&data as *const [u8; FIELD_COUNT] as *const Grid),
-            state: 0xACE1,
-        }
-    }
-
-    fn to_bytes(&self) -> &[u8] {
-        const _: () = assert!(size_of::<FieldType>() == size_of::<u8>());
-        let data: &[[FieldType; GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE] = &self.grid;
-        const _: () = assert!(size_of::<Grid>() == GRID_HEIGHT_USIZE * GRID_WIDTH_USIZE);
-        const _: () = assert!(size_of::<Grid>() < isize::MAX as usize);
-        let data = data as *const Grid as *const u8;
-        unsafe { slice::from_raw_parts(data, size_of::<Grid>()) }
-    }
 }
 
 #[inline]
@@ -209,7 +100,7 @@ fn handle_events(_app: &App, model: &mut Model, event: Event) -> () {
                         eprintln!("Written data to {SAVE_FILE}")
                     }
                 }
-                VirtualKeyCode::R => model.grid = Model::new().grid,
+                VirtualKeyCode::R => model.clear_grid(),
                 _ => (),
             },
             Some(DroppedFile(path)) => {
