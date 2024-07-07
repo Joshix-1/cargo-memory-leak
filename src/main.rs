@@ -117,11 +117,7 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
 
-    model.draw(app.main_window(), &draw);
-
-    draw.to_frame(app, &frame).unwrap();
-
-    if app.fps() < 50f32 {
-        eprintln!("{}", app.fps());
+    if model.draw(app.main_window(), &draw) {
+        draw.to_frame(app, &frame).unwrap();
     }
 }

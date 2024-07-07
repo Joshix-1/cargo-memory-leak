@@ -218,7 +218,10 @@ impl Model {
         }
     }
 
-    pub fn draw(&self, window: Ref<Window>, draw: &Draw) {
+    pub fn draw(&self, window: Ref<Window>, draw: &Draw) -> bool {
+        if self.old_grid.borrow().as_ref() == Some(&self.grid) {
+            return false;
+        }
         let force_redraw = {
             if self.old_grid.borrow().as_ref() == None {
                 true
@@ -264,5 +267,7 @@ impl Model {
         };
 
         *self.old_grid.borrow_mut() = Some(self.grid);
+
+        true
     }
 }
