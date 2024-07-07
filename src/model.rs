@@ -1,4 +1,4 @@
-use crate::field_type::FieldType;
+use crate::field_type::{FieldType, SandColor};
 use crate::model::constants::{FIELD_COUNT, GRID_HEIGHT_USIZE, GRID_WIDTH_USIZE};
 use std::fmt::Debug;
 use std::fs::File;
@@ -117,6 +117,68 @@ impl Model {
             Err(err) => {
                 eprintln!("Failed to open {file_path:?}: {err}");
                 None
+            }
+        }
+    }
+
+    #[inline]
+    pub fn update(&mut self) {
+        for y in (0..GRID_HEIGHT_USIZE - 1).rev() {
+            let y_below = y + 1;
+            let revert = self.get_random_bit();
+            for x in 0..GRID_WIDTH_USIZE {
+                let x = if revert { GRID_WIDTH_USIZE - 1 - x } else { x };
+                match *self.get(x, y).unwrap() {
+                    FieldType::Air => (),
+                    FieldType::Wood => (),
+                    FieldType::BlackHole => (),
+                    FieldType::SandSource => {
+                        let color = SandColor::from_random_source(|| self.get_random_bit());
+                        if let Some(below) = self.get_mut(x, y_below) {
+                            if *below == FieldType::Air {
+                                *below = FieldType::Sand(color);
+                            }
+                        }
+                    }
+                    FieldType::Sand(d) => {
+                        // sand can fall down
+                        if if let Some(below) = self.get_mut(x, y_below) {
+                            if *below == FieldType::Air {
+                                *below = FieldType::Sand(d);
+                                true
+                            } else {
+                                *below == FieldType::BlackHole
+                            }
+                        } else {
+                            false
+                        } {
+                            *self.get_mut(x, y).unwrap() = FieldType::Air;
+                        } else {
+                            for dx in if self.get_random_bit() {
+                                [1, -1]
+                            } else {
+                                [-1, 1]
+                            } {
+                                if let Some(curr_x) = x.checked_add_signed(dx) {
+                                    if curr_x != x && self.get(curr_x, y) != Some(&FieldType::Air) {
+                                        continue;
+                                    }
+                                    if let Some(below) = self.get(curr_x, y_below) {
+                                        if *below == FieldType::Air {
+                                            *self.get_mut(curr_x, y).unwrap() = FieldType::Sand(d);
+                                            *self.get_mut(x, y).unwrap() = FieldType::Air;
+                                            break;
+                                        }
+                                        if *below == FieldType::BlackHole {
+                                            *self.get_mut(x, y).unwrap() = FieldType::Air;
+                                            break;
+                                        }
+                                    }
+                                };
+                            }
+                        }
+                    }
+                };
             }
         }
     }
