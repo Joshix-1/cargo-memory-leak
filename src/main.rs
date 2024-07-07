@@ -1,5 +1,10 @@
-use nannou::prelude::*;
+use nannou::color::{Srgb, BLACK, BURLYWOOD, DARKGRAY, DARKSLATEGRAY, WHITE};
+use nannou::event::Update;
+use nannou::geom::Rect;
+use nannou::prelude::{DroppedFile, KeyReleased, ToPrimitive};
+use nannou::window::Window;
 use nannou::winit::event::VirtualKeyCode;
+use nannou::{App, Event, Frame};
 use std::cell::Ref;
 use std::fmt::Debug;
 use std::fs::File;
@@ -161,7 +166,7 @@ fn try_read_data_from_save<P: AsRef<Path> + Debug + ?Sized>(file_path: &P) -> Op
                 Err(err) => {
                     eprintln!("Failed read from {file_path:?}: {err}");
                     None
-                },
+                }
                 Ok(count) => {
                     if count == FIELD_COUNT {
                         let mut rest: [u8; 1] = [0; 1];
@@ -176,7 +181,7 @@ fn try_read_data_from_save<P: AsRef<Path> + Debug + ?Sized>(file_path: &P) -> Op
                         eprintln!("{file_path:?} didn't contain {FIELD_COUNT} bytes");
                         None
                     }
-                },
+                }
             }
         }
         Err(err) => {
