@@ -6,6 +6,7 @@ use crate::model::constants::{
 use nannou::color::DARKGRAY;
 use nannou::window::Window;
 use nannou::Draw;
+use num_traits::FromPrimitive;
 use std::cell::{Ref, RefCell};
 use std::fmt::Debug;
 use std::fs::File;
@@ -98,9 +99,14 @@ impl Model {
         bit != 0
     }
 
-    unsafe fn from_bytes(data: [u8; FIELD_COUNT]) -> Self {
+    fn from_bytes(mut data: [u8; FIELD_COUNT]) -> Self {
+        for val in data.iter_mut() {
+            if FieldType::from_u8(*val).is_none() {
+                *val = FieldType::default() as u8;
+            }
+        }
         Model {
-            grid: *(&data as *const [u8; FIELD_COUNT] as *const Grid),
+            grid: unsafe { *(&data as *const [u8; FIELD_COUNT] as *const Grid) },
             ..Default::default()
         }
     }
@@ -137,7 +143,7 @@ impl Model {
                                 None
                             } else {
                                 eprintln!("Loaded data from {file_path:?}");
-                                Some(unsafe { Model::from_bytes(data) })
+                                Some(Model::from_bytes(data))
                             }
                         } else {
                             eprintln!("{file_path:?} didn't contain {FIELD_COUNT} bytes");

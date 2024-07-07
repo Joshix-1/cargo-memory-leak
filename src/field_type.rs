@@ -1,8 +1,9 @@
 use nannou::color::{Srgb, BLACK, BURLYWOOD, DARKSLATEGRAY, WHITE};
+use num_derive::FromPrimitive;
 use std::marker::PhantomData;
 use std::mem::size_of;
 
-#[derive(Copy, Clone, Eq, PartialEq, Default)]
+#[derive(Copy, Clone, Eq, PartialEq, Default, FromPrimitive)]
 #[repr(u8)]
 #[rustfmt::skip]
 pub enum FieldType {
