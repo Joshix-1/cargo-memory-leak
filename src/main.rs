@@ -182,11 +182,13 @@ fn handle_events(_app: &App, model: &mut Model, event: Event) -> () {
         } => match window_event {
             Some(KeyReleased(key)) => match key {
                 VirtualKeyCode::S => {
-                    File::create(SAVE_FILE)
-                        .unwrap()
-                        .write_all(&model.to_bytes())
-                        .unwrap();
-                    println!("Written data to save.dat");
+                    if let Err(err) = File::create(SAVE_FILE)
+                        .and_then(|mut file| file.write_all(&model.to_bytes()))
+                    {
+                        eprintln!("Failed to write to {SAVE_FILE}: {err}")
+                    } else {
+                        eprintln!("Written data to {SAVE_FILE}")
+                    }
                 }
                 VirtualKeyCode::R => {
                     model.grid = Model::new().grid;
