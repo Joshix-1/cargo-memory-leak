@@ -58,6 +58,7 @@ fn handle_events(app: &App, model: &mut Model, event: Event) {
                     }
                 }
                 VirtualKeyCode::R => model.clear_grid(),
+                VirtualKeyCode::C => model.replace_sand_with_air(),
                 _ => (),
             },
             Some(DroppedFile(path)) => {

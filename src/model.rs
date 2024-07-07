@@ -56,10 +56,21 @@ impl Default for Model {
 impl Model {
     #[inline]
     pub fn clear_grid(&mut self) {
-        *self.old_grid.borrow_mut() = Some(self.grid);
         self.grid = Model::default().grid;
     }
 
+    #[inline]
+    pub fn replace_sand_with_air(&mut self) {
+        for row in self.grid.iter_mut() {
+            for cell in row.iter_mut() {
+                if cell.is_sand() {
+                    *cell = FieldType::Air;
+                }
+            }
+        }
+    }
+
+    #[inline]
     pub fn force_redraw(&mut self) {
         *self.old_grid.borrow_mut() = None;
     }

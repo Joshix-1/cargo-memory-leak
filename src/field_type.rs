@@ -34,17 +34,17 @@ impl FieldType {
     }
 
     pub const fn is_sand(self) -> bool {
-        match self {
+        matches!(
+            self,
             FieldType::SandC0
-            | FieldType::SandC1
-            | FieldType::SandC2
-            | FieldType::SandC3
-            | FieldType::SandC4
-            | FieldType::SandC5
-            | FieldType::SandC6
-            | FieldType::SandC7 => true,
-            _ => false,
-        }
+                | FieldType::SandC1
+                | FieldType::SandC2
+                | FieldType::SandC3
+                | FieldType::SandC4
+                | FieldType::SandC5
+                | FieldType::SandC6
+                | FieldType::SandC7
+        )
     }
 
     #[rustfmt::skip]
