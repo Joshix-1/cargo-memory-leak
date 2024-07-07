@@ -3,7 +3,7 @@ use num_derive::FromPrimitive;
 use std::marker::PhantomData;
 use std::mem::size_of;
 
-#[derive(Copy, Clone, Eq, PartialEq, Default, FromPrimitive)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Default, FromPrimitive)]
 #[repr(u8)]
 #[rustfmt::skip]
 pub enum FieldType {
@@ -30,6 +30,20 @@ impl FieldType {
             (true, false, true) => FieldType::SandC5,
             (true, true, false) => FieldType::SandC6,
             (true, true, true) => FieldType::SandC7,
+        }
+    }
+
+    pub const fn is_sand(self) -> bool {
+        match self {
+            FieldType::SandC0
+            | FieldType::SandC1
+            | FieldType::SandC2
+            | FieldType::SandC3
+            | FieldType::SandC4
+            | FieldType::SandC5
+            | FieldType::SandC6
+            | FieldType::SandC7 => true,
+            _ => false,
         }
     }
 

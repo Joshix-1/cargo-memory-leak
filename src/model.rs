@@ -166,8 +166,7 @@ impl Model {
             let revert = self.get_random_bit();
             for x in 0..GRID_WIDTH_USIZE {
                 let x = if revert { GRID_WIDTH_USIZE - 1 - x } else { x };
-                let field_type = *self.get(x, y).unwrap();
-                match field_type {
+                match *self.get(x, y).unwrap() {
                     FieldType::Air => (),
                     FieldType::Wood => (),
                     FieldType::BlackHole => (),
@@ -179,14 +178,7 @@ impl Model {
                             }
                         }
                     }
-                    FieldType::SandC0
-                    | FieldType::SandC1
-                    | FieldType::SandC2
-                    | FieldType::SandC3
-                    | FieldType::SandC4
-                    | FieldType::SandC5
-                    | FieldType::SandC6
-                    | FieldType::SandC7 => {
+                    field_type if field_type.is_sand() => {
                         // sand can fall down
                         if if let Some(below) = self.get_mut(x, y_below) {
                             if *below == FieldType::Air {
@@ -224,6 +216,7 @@ impl Model {
                             }
                         }
                     }
+                    field_type => panic!("Invalid FieldType {field_type:?}"),
                 };
             }
         }
