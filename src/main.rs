@@ -118,7 +118,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let draw_count = model.draw(app.main_window(), &draw);
     #[cfg(debug_assertions)]
     eprintln!("drawn {draw_count} times. FPS: {}", app.fps());
-    if  draw_count != 0 {
+    if draw_count != 0 {
         draw.to_frame(app, &frame).unwrap();
     }
 }

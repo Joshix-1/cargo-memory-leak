@@ -1,8 +1,7 @@
 use crate::field_type::FieldType;
 use crate::get_cell_size_and_display_rect;
-use crate::model::constants::{
-    FIELD_COUNT, GRID_HEIGHT, GRID_HEIGHT_USIZE, GRID_WIDTH_USIZE,
-};
+use crate::model::constants::{FIELD_COUNT, GRID_HEIGHT, GRID_HEIGHT_USIZE, GRID_WIDTH_USIZE};
+use itertools::Itertools;
 use nannou::color::DARKGRAY;
 use nannou::window::Window;
 use nannou::Draw;
@@ -17,7 +16,6 @@ use std::path::Path;
 use std::rc::Rc;
 use std::slice::SliceIndex;
 use std::{io, slice};
-use itertools::Itertools;
 
 pub mod constants {
     pub const GRID_HEIGHT: u16 = 200;
@@ -78,7 +76,11 @@ impl Model {
     }
 
     #[inline]
-    pub fn has_changed<Y: Into<usize>, X: SliceIndex<[FieldType]> + Clone>(&self, x: X, y: Y) -> bool
+    pub fn has_changed<Y: Into<usize>, X: SliceIndex<[FieldType]> + Clone>(
+        &self,
+        x: X,
+        y: Y,
+    ) -> bool
     where
         <X as SliceIndex<[FieldType]>>::Output: PartialEq,
     {
@@ -273,7 +275,14 @@ impl Model {
 
         for y in 0..GRID_HEIGHT {
             let draw = draw.y(-<f32 as From<u16>>::from(y) * cell_size);
-            for (value, mut group) in &self.grid.get(y as usize).unwrap().iter().enumerate().chunk_by(|(_, val)| **val) {
+            for (value, mut group) in &self
+                .grid
+                .get(y as usize)
+                .unwrap()
+                .iter()
+                .enumerate()
+                .chunk_by(|(_, val)| **val)
+            {
                 let x = {
                     let (first, _) = group.next().unwrap();
                     let last = group.last().map(|(i, _)| i).unwrap_or_else(|| first);
@@ -288,7 +297,10 @@ impl Model {
                 draw.rect()
                     .color(value.get_colour())
                     .w_h(cell_size * len, cell_size)
-                    .x(<f32 as From<u16>>::from(u16::try_from(x.start).unwrap()) * cell_size + (cell_size * (len - 1.0)) / 2.0);
+                    .x(
+                        <f32 as From<u16>>::from(u16::try_from(x.start).unwrap()) * cell_size
+                            + (cell_size * (len - 1.0)) / 2.0,
+                    );
                 draw_count += 1;
             }
         }
