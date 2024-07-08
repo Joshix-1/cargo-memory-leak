@@ -5,15 +5,20 @@ use std::mem::size_of;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Default, FromPrimitive)]
 #[repr(u8)]
-#[rustfmt::skip]
 pub enum FieldType {
-    SandC0 = 0, SandC1 = 1, SandC2 = 2, SandC3 = 3,
-    SandC4 = 4, SandC5 = 5, SandC6 = 6, SandC7 = 7,
     #[default]
-    Air = 8,
-    Wood = 10,
-    SandSource = 11,
-    BlackHole = 12,
+    Air = 0,
+    Wood = 1,
+    SandSource = 2,
+    BlackHole = 3,
+    SandC0 = 0 << 3 | 0b100,
+    SandC1 = 1 << 3 | 0b100,
+    SandC2 = 2 << 3 | 0b100,
+    SandC3 = 3 << 3 | 0b100,
+    SandC4 = 4 << 3 | 0b100,
+    SandC5 = 5 << 3 | 0b100,
+    SandC6 = 6 << 3 | 0b100,
+    SandC7 = 7 << 3 | 0b100,
 }
 
 const _: () = assert!(size_of::<FieldType>() == 1);

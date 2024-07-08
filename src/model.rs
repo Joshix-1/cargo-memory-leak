@@ -20,7 +20,7 @@ use std::{io, slice};
 use itertools::Itertools;
 
 pub mod constants {
-    pub const GRID_HEIGHT: u16 = 150;
+    pub const GRID_HEIGHT: u16 = 200;
     pub const GRID_WIDTH: u16 = (GRID_HEIGHT * 4) / 3;
 
     pub const GRID_HEIGHT_USIZE: usize = GRID_HEIGHT as usize;
