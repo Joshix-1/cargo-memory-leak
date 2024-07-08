@@ -283,11 +283,10 @@ impl Model {
                 if !force_redraw && !self.has_changed(x.clone(), y) {
                     continue;
                 }
-                let colour = value.get_colour();
 
                 let len: f32 = u16::try_from(x.len()).unwrap().into();
                 draw.rect()
-                    .color(colour)
+                    .color(value.get_colour())
                     .w_h(cell_size * len, cell_size)
                     .x(<f32 as From<u16>>::from(u16::try_from(x.start).unwrap()) * cell_size + (cell_size * (len - 1.0)) / 2.0);
                 draw_count += 1;
