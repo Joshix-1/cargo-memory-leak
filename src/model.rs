@@ -75,6 +75,7 @@ impl Model {
                 }
             }
         }
+        self.state = Model::default().state;
     }
 
     #[inline]
