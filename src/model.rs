@@ -1,7 +1,7 @@
 use crate::field_type::FieldType;
 use crate::get_cell_size_and_display_rect;
 use crate::model::constants::{
-    FIELD_COUNT, GRID_HEIGHT, GRID_HEIGHT_USIZE, GRID_WIDTH, GRID_WIDTH_USIZE,
+    FIELD_COUNT, GRID_HEIGHT, GRID_HEIGHT_USIZE, GRID_WIDTH_USIZE,
 };
 use nannou::color::DARKGRAY;
 use nannou::window::Window;
@@ -17,6 +17,7 @@ use std::path::Path;
 use std::rc::Rc;
 use std::slice::SliceIndex;
 use std::{io, slice};
+use itertools::Itertools;
 
 pub mod constants {
     pub const GRID_HEIGHT: u16 = 150;
@@ -77,13 +78,13 @@ impl Model {
     }
 
     #[inline]
-    pub fn has_changed<Y: Into<usize>, X: SliceIndex<[FieldType]> + Copy>(&self, x: X, y: Y) -> bool
+    pub fn has_changed<Y: Into<usize>, X: SliceIndex<[FieldType]> + Clone>(&self, x: X, y: Y) -> bool
     where
         <X as SliceIndex<[FieldType]>>::Output: PartialEq,
     {
         if let Some(old_grid) = self.old_grid.borrow().as_ref() {
             let y = y.into();
-            old_grid.get(y).and_then(|row| row.get(x)) != self.get(x, y)
+            old_grid.get(y).and_then(|row| row.get(x.clone())) != self.get(x, y)
         } else {
             true
         }
@@ -270,16 +271,23 @@ impl Model {
 
         for y in 0..GRID_HEIGHT {
             let draw = draw.y(-<f32 as From<u16>>::from(y) * cell_size);
-            for x in 0..GRID_WIDTH {
-                if !force_redraw && !self.has_changed(x as usize, y) {
+            for (value, mut group) in &self.grid.get(y as usize).unwrap().iter().enumerate().chunk_by(|(_, val)| **val) {
+                let x = {
+                    let (first, _) = group.next().unwrap();
+                    let last = group.last().map(|(i, _)| i).unwrap_or_else(|| first);
+
+                    first..(last + 1)
+                };
+                if !force_redraw && !self.has_changed(x.clone(), y) {
                     continue;
                 }
-                let colour = self.get(x as usize, y).unwrap().get_colour();
+                let colour = value.get_colour();
 
+                let len: f32 = u16::try_from(x.len()).unwrap().into();
                 draw.rect()
                     .color(colour)
-                    .w_h(cell_size, cell_size)
-                    .x(<f32 as From<u16>>::from(x) * cell_size);
+                    .w_h(cell_size * len, cell_size)
+                    .x(<f32 as From<u16>>::from(u16::try_from(x.start).unwrap()) * cell_size + (cell_size * (len - 1.0)) / 2.0);
             }
         }
 
