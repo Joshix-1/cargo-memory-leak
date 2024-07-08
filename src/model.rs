@@ -44,8 +44,15 @@ pub struct Model {
 impl Default for Model {
     #[inline]
     fn default() -> Self {
+        let mut grid = [[FieldType::default(); GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE];
+        for row in grid.iter_mut() {
+            *row.first_mut().unwrap() = FieldType::Wood;
+            *row.last_mut().unwrap() = FieldType::Wood;
+        }
+        *grid.first_mut().unwrap() = [FieldType::Wood; GRID_WIDTH_USIZE];
+        *grid.last_mut().unwrap() = [FieldType::Wood; GRID_WIDTH_USIZE];
         Model {
-            grid: [[FieldType::Air; GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE],
+            grid,
             old_grid: Default::default(),
             last_window_size: Default::default(),
             state: 0xACE1,
@@ -183,7 +190,7 @@ impl Model {
 
     #[inline]
     pub fn update(&mut self) {
-        for y in (0..GRID_HEIGHT_USIZE - 1).rev() {
+        for y in (0..GRID_HEIGHT_USIZE).rev() {
             let y_below = y + 1;
             let revert = self.get_random_bit();
             for x in 0..GRID_WIDTH_USIZE {
@@ -202,15 +209,16 @@ impl Model {
                     }
                     field_type if field_type.is_sand() => {
                         // sand can fall down
-                        if if let Some(below) = self.get_mut(x, y_below) {
+                        let mut default = FieldType::BlackHole;
+                        if {
+                            let below: &mut FieldType =
+                                self.get_mut(x, y_below).unwrap_or(&mut default);
                             if *below == FieldType::Air {
                                 *below = field_type;
                                 true
                             } else {
                                 *below == FieldType::BlackHole
                             }
-                        } else {
-                            false
                         } {
                             *self.get_mut(x, y).unwrap() = FieldType::Air;
                         } else {
@@ -220,19 +228,22 @@ impl Model {
                                 [-1, 1]
                             } {
                                 if let Some(curr_x) = x.checked_add_signed(dx) {
-                                    if curr_x != x && self.get(curr_x, y) != Some(&FieldType::Air) {
+                                    if curr_x != x
+                                        && self.get(curr_x, y).or_else(|| Some(&FieldType::Air))
+                                            != Some(&FieldType::Air)
+                                    {
                                         continue;
                                     }
-                                    if let Some(below) = self.get(curr_x, y_below) {
-                                        if *below == FieldType::Air {
-                                            *self.get_mut(curr_x, y).unwrap() = field_type;
-                                            *self.get_mut(x, y).unwrap() = FieldType::Air;
-                                            break;
-                                        }
-                                        if *below == FieldType::BlackHole {
-                                            *self.get_mut(x, y).unwrap() = FieldType::Air;
-                                            break;
-                                        }
+                                    let below =
+                                        self.get_mut(curr_x, y_below).unwrap_or(&mut default);
+                                    if *below == FieldType::Air {
+                                        *self.get_mut(curr_x, y).unwrap() = field_type;
+                                        *self.get_mut(x, y).unwrap() = FieldType::Air;
+                                        break;
+                                    }
+                                    if *below == FieldType::BlackHole {
+                                        *self.get_mut(x, y).unwrap() = FieldType::Air;
+                                        break;
                                     }
                                 };
                             }
