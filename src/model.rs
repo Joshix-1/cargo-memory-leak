@@ -15,6 +15,7 @@ use std::mem::size_of;
 use std::ops::Deref;
 use std::path::Path;
 use std::rc::Rc;
+use std::slice::SliceIndex;
 use std::{io, slice};
 
 pub mod constants {
@@ -76,9 +77,12 @@ impl Model {
     }
 
     #[inline]
-    pub fn has_changed<T: Into<usize>>(&self, x: T, y: T) -> bool {
+    pub fn has_changed<Y: Into<usize>, X: SliceIndex<[FieldType]> + Copy>(&self, x: X, y: Y) -> bool
+    where
+        <X as SliceIndex<[FieldType]>>::Output: PartialEq,
+    {
         if let Some(old_grid) = self.old_grid.borrow().as_ref() {
-            let (x, y) = (x.into(), y.into());
+            let y = y.into();
             old_grid.get(y).and_then(|row| row.get(x)) != self.get(x, y)
         } else {
             true
@@ -86,8 +90,12 @@ impl Model {
     }
 
     #[inline]
-    pub fn get<T: Into<usize>>(&self, x: T, y: T) -> Option<&FieldType> {
-        self.grid.get(y.into()).and_then(|row| row.get(x.into()))
+    pub fn get<Y: Into<usize>, X: SliceIndex<[FieldType]>>(
+        &self,
+        x: X,
+        y: Y,
+    ) -> Option<&X::Output> {
+        self.grid.get(y.into()).and_then(|row| row.get(x))
     }
 
     #[inline]
@@ -263,10 +271,10 @@ impl Model {
         for y in 0..GRID_HEIGHT {
             let draw = draw.y(-<f32 as From<u16>>::from(y) * cell_size);
             for x in 0..GRID_WIDTH {
-                if !force_redraw && !self.has_changed(x, y) {
+                if !force_redraw && !self.has_changed(x as usize, y) {
                     continue;
                 }
-                let colour = self.get(x, y).unwrap().get_colour();
+                let colour = self.get(x as usize, y).unwrap().get_colour();
 
                 draw.rect()
                     .color(colour)
