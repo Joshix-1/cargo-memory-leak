@@ -242,9 +242,10 @@ impl Model {
         }
     }
 
-    pub fn draw(&self, window: Ref<Window>, draw: &Draw) -> bool {
+    pub fn draw(&self, window: Ref<Window>, draw: &Draw) -> u32 {
+        let mut draw_count: u32 = 0;
         if self.old_grid.borrow().as_ref() == Some(&self.grid) {
-            return false;
+            return draw_count;
         }
         let force_redraw = {
             if self.old_grid.borrow().as_ref().is_none() {
@@ -261,6 +262,7 @@ impl Model {
         };
         if force_redraw {
             draw.background().color(DARKGRAY);
+            draw_count += 1;
         }
         let (cell_size, display_rect) = get_cell_size_and_display_rect(window);
 
@@ -288,11 +290,12 @@ impl Model {
                     .color(colour)
                     .w_h(cell_size * len, cell_size)
                     .x(<f32 as From<u16>>::from(u16::try_from(x.start).unwrap()) * cell_size + (cell_size * (len - 1.0)) / 2.0);
+                draw_count += 1;
             }
         }
 
         *self.old_grid.borrow_mut() = Some(self.grid);
 
-        true
+        draw_count
     }
 }
