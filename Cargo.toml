@@ -14,11 +14,9 @@ strip = true
 lto = true
 opt-level = "z"
 overflow-checks = true
-debug-assertions = true
 
 [profile.release.package."*"]
 overflow-checks = false
-debug-assertions = false
 
 [dependencies]
 itertools = "0.13.0"
