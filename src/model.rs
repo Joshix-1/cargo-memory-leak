@@ -235,16 +235,16 @@ impl Model {
                                     {
                                         continue;
                                     }
-                                    let below =
-                                        self.get_mut(curr_x, y_below).unwrap_or(&mut default);
-                                    if *below == FieldType::Air {
-                                        *self.get_mut(curr_x, y).unwrap() = field_type;
-                                        *self.get_mut(x, y).unwrap() = FieldType::Air;
-                                        break;
-                                    }
-                                    if *below == FieldType::BlackHole {
-                                        *self.get_mut(x, y).unwrap() = FieldType::Air;
-                                        break;
+                                    if let Some(below) = self.get_mut(curr_x, y_below) {
+                                        if *below == FieldType::Air {
+                                            *self.get_mut(curr_x, y).unwrap() = field_type;
+                                            *self.get_mut(x, y).unwrap() = FieldType::Air;
+                                            break;
+                                        }
+                                        if *below == FieldType::BlackHole {
+                                            *self.get_mut(x, y).unwrap() = FieldType::Air;
+                                            break;
+                                        }
                                     }
                                 };
                             }
