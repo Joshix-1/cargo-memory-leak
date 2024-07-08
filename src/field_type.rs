@@ -62,7 +62,7 @@ impl FieldType {
             FieldType::SandC4 => Srgb { red: 255, green: 133, blue: 149, standard: PhantomData },
             FieldType::SandC5 => Srgb { red: 255, green: 128, blue: 161, standard: PhantomData },
             FieldType::SandC6 => Srgb { red: 255, green: 177, blue: 173, standard: PhantomData },
-            FieldType::SandC7 => Srgb { red: 255, green: 219, blue: 229, standard: PhantomData },
+            FieldType::SandC7 => Srgb { red: 255, green: 180, blue: 229, standard: PhantomData },
             FieldType::Air => BLACK,
             FieldType::Wood => BURLYWOOD,
             FieldType::SandSource => WHITE,
