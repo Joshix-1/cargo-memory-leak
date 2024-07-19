@@ -16,18 +16,15 @@ struct Vertex {
 }
 
 // The vertices that make up the rectangle to which the image will be drawn.
-const VERTICES: [Vertex; 4] = [
+const VERTICES: [Vertex; 3] = [
     Vertex {
-        position: [-1.0, 1.0],
+        position: [0.5, 0],
     },
     Vertex {
-        position: [-1.0, -1.0],
+        position: [0, 1],
     },
     Vertex {
-        position: [1.0, 1.0],
-    },
-    Vertex {
-        position: [1.0, -1.0],
+        position: [0.5, 0.5],
     },
 ];
 

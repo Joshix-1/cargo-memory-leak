@@ -15,13 +15,13 @@ pub(crate) struct Vertex {
 // The vertices that make up the rectangle to which the image will be drawn.
 pub(crate) const VERTICES: [Vertex; 3] = [
     Vertex {
-        position: [0.0, 0.0],
+        position: [0.0, 0.5],
     },
     Vertex {
-        position: [0.0, 0.0],
+        position: [-0.5, -0.5],
     },
     Vertex {
-        position: [0.0, 0.0],
+        position: [0.5, -0.5],
     },
 ];
 
