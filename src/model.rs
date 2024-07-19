@@ -11,7 +11,7 @@ use std::mem::size_of;
 use std::path::Path;
 use std::slice::SliceIndex;
 use std::{io, slice};
-use std::ops::Deref;
+use std::cell::Ref;
 use nannou::window::Window;
 use crate::get_cell_size_and_display_rect;
 
@@ -30,9 +30,44 @@ pub mod constants {
 pub type Row = [FieldType; GRID_WIDTH_USIZE];
 pub type Grid = [Row; GRID_HEIGHT_USIZE];
 
+struct GridDisplayDimensions {
+    top_left_x: f32,
+    top_left_y: f32,
+    width: f32,
+    height: f32,
+}
+
+impl Default for GridDisplayDimensions {
+    fn default() -> Self {
+        Self {
+            top_left_y: 0.0,
+            top_left_x: 0.0,
+            height: Self::W,
+            width: Self::W,
+        }
+    }
+}
+
+impl GridDisplayDimensions {
+    const W: f32 = 2.0;
+    fn new(window: Ref<Window>) -> Self {
+        let window_rect = window.rect();
+        let (px_width, px_height) = window.inner_size_points();
+        let (_, rect) = get_cell_size_and_display_rect(window);
+
+        Self {
+            top_left_x: Self::W * (rect.x.start - window_rect.x.start) / px_width,
+            top_left_y: Self::W * (rect.y.start - window_rect.y.start) / px_height,
+            width: Self::W * rect.x.len() / px_width,
+            height: Self::W * rect.y.len() / px_height,
+        }
+    }
+}
+
 pub struct Model {
     grid: Grid,
     state: u32,
+    grid_dim: GridDisplayDimensions,
     pub vertices: Box<Vertices>,
 }
 
@@ -49,6 +84,7 @@ impl Default for Model {
         Model {
             grid,
             state: 0xACE1,
+            grid_dim: Default::default(),
             vertices: Box::new(
                 [Vertex {
                     position: [0.0, 0.0],
@@ -233,7 +269,11 @@ impl Model {
         }
     }
 
-    pub fn write_to_vertices(&mut self, window: std::cell::Ref<Window>) {
+    pub(crate) fn resize_window(&mut self, window: Ref<Window>) {
+        self.grid_dim = GridDisplayDimensions::new(window);
+    }
+
+    pub fn write_to_vertices(&mut self) {
         const OFFSETS: [(u16, u16); 6] = [
             // triangle 1
             (1, 0), // top right
@@ -245,18 +285,6 @@ impl Model {
             (1, 1), // bottom right
         ];
 
-        const W: f32 = 2.0;
-
-        let window_rect = window.rect();
-        let (px_width, px_height) = window.inner_size_points();
-        let (_, rect) = get_cell_size_and_display_rect(window);
-
-        let top_left_x = W * (rect.x.start - window_rect.x.start) / px_width;
-        let top_left_y = W * (rect.y.start - window_rect.y.start) / px_height;
-
-        let width = W * rect.x.len() / px_width;
-        let height = W * rect.y.len() / px_height;
-
         for (y, row) in self.grid.iter().enumerate() {
             for (x, field) in row.iter().enumerate() {
                 let colour = field.get_colour_v3();
@@ -267,8 +295,8 @@ impl Model {
                     let vertex = self.vertices.get_mut(first_index + i).unwrap();
                     vertex.color = colour;
                     vertex.position = [
-                        top_left_x + width * f32::from(x as u16 + dx) / GRID_WIDTH_F32,
-                        top_left_y + height * f32::from(y as u16 + dy) / GRID_HEIGHT_F32,
+                        self.grid_dim.top_left_x +  self.grid_dim.width * f32::from(x as u16 + dx) / GRID_WIDTH_F32,
+                        self.grid_dim.top_left_y +  self.grid_dim.height * f32::from(y as u16 + dy) / GRID_HEIGHT_F32,
                     ];
                 }
             }
