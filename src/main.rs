@@ -169,8 +169,8 @@ fn view(app: &App, model: &CompleteModel, frame: Frame) {
         .begin(&mut encoder);
     render_pass.set_pipeline(&model.wgpu_model.render_pipeline);
     render_pass.set_vertex_buffer(0, model.wgpu_model.vertex_buffer.slice(..));
-    let (_, rect) = get_cell_size_and_display_rect(app.window(frame.window_id()).unwrap());
-    render_pass.set_viewport(rect.x.start, rect.y.start, rect.w(), rect.h(), 0.0, 0.0);
+    // let (_, rect) = get_cell_size_and_display_rect(app.window(frame.window_id()).unwrap());
+    // render_pass.set_viewport(rect.x.start, rect.y.start, rect.w(), rect.h(), 0.0, 0.0);
     let vertex_range = 0..VERTICES.len() as u32;
     let instance_range = 0..1;
     render_pass.draw(vertex_range, instance_range);
