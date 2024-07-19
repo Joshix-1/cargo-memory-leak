@@ -1,10 +1,13 @@
 use crate::field_type::FieldType;
-use crate::{get_cell_size_and_display_rect};
-use crate::model::constants::{FIELD_COUNT, GRID_HEIGHT, GRID_HEIGHT_F32, GRID_HEIGHT_USIZE, GRID_WIDTH_F32, GRID_WIDTH_USIZE};
+use crate::get_cell_size_and_display_rect;
+use crate::model::constants::{
+    FIELD_COUNT, GRID_HEIGHT, GRID_HEIGHT_F32, GRID_HEIGHT_USIZE, GRID_WIDTH_F32, GRID_WIDTH_USIZE,
+};
+use crate::wgpu_utils::{Vertex, Vertices};
 use itertools::Itertools;
 use nannou::color::DARKGRAY;
 use nannou::window::Window;
-use nannou::{Draw};
+use nannou::Draw;
 use num_traits::FromPrimitive;
 use std::cell::{Ref, RefCell};
 use std::fmt::Debug;
@@ -16,7 +19,6 @@ use std::path::Path;
 use std::rc::Rc;
 use std::slice::SliceIndex;
 use std::{io, slice};
-use crate::wgpu_utils::{Vertex, Vertices};
 
 pub mod constants {
     pub const GRID_HEIGHT: u16 = 200;
@@ -48,20 +50,22 @@ impl Default for Model {
     fn default() -> Self {
         let mut grid = [[FieldType::default(); GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE];
         for row in grid.iter_mut() {
-            *row.first_mut().unwrap() = FieldType::Wood;
-            *row.last_mut().unwrap() = FieldType::Wood;
+            //*row.first_mut().unwrap() = FieldType::Wood;
+            //*row.last_mut().unwrap() = FieldType::Wood;
         }
-        *grid.first_mut().unwrap() = [FieldType::Wood; GRID_WIDTH_USIZE];
+        //*grid.first_mut().unwrap() = [FieldType::Wood; GRID_WIDTH_USIZE];
         *grid.last_mut().unwrap() = [FieldType::Wood; GRID_WIDTH_USIZE];
         Model {
             grid,
             old_grid: Default::default(),
             last_window_size: Default::default(),
             state: 0xACE1,
-            vertices: Box::new([Vertex {
-                position: [0.0, 0.0],
-                color: [0.0, 0.0, 0.0],
-            }; size_of::<Vertices>() / size_of::<Vertex>()]),
+            vertices: Box::new(
+                [Vertex {
+                    position: [0.0, 0.0],
+                    color: [0.0, 0.0, 0.0],
+                }; size_of::<Vertices>() / size_of::<Vertex>()],
+            ),
         }
     }
 }
@@ -263,22 +267,32 @@ impl Model {
     }
 
     pub fn write_to_vertices(&mut self) -> () {
-        const cell_width: f32 = 2.0 / GRID_WIDTH_F32;
-        const cell_height: f32 = 2.0 / GRID_HEIGHT_F32;
+        const CELL_WIDTH: f64 = 2.0 / GRID_WIDTH_F32 as f64;
+        const CELL_HEIGHT: f64 = 2.0 / GRID_HEIGHT_F32 as f64;
         for (y, row) in self.grid.iter().enumerate() {
             for (x, field) in row.iter().enumerate() {
                 let colour = field.get_colour_v3();
                 let first_index = (row.len() * y + x) * 6;
-                let top_left_x = (f32::from(x as u16) / GRID_WIDTH_F32) * 2.0 - 1.0;
-                let top_left_y = (f32::from(y as u16) / GRID_HEIGHT_F32) * -2.0 + 1.0;
+                let top_left_x = (f64::from(x as u16) / GRID_WIDTH_F32 as f64) * 2.0 - 1.0;
+                let top_left_y = (f64::from(y as u16) / GRID_HEIGHT_F32 as f64) * -2.0 + 1.0;
 
-                for i in 0..2usize {
-                    let index = first_index + i;
-                    let vertex: &mut Vertex = self.vertices.get_mut(index).unwrap();
+                const OFFSETS: [(f64, f64); 6] = [
+                    // triangle 1
+                    (0.0, 0.0), // top left
+                    (0.0, 1.0), // bottom left
+                    (1.0, 0.0), // top right
+                    // triangle 2
+                    (1.0, 0.0), // top right
+                    (0.0, 1.0), // bottom left
+                    (1.0, 1.0), // bottom right
+                ];
+
+                for (i, (dx, dy)) in OFFSETS.iter().enumerate() {
+                    let vertex = self.vertices.get_mut(first_index + i).unwrap();
                     vertex.color = colour;
                     vertex.position = [
-                        top_left_x + (if i == 1 { cell_width } else { 0.0 }),
-                        top_left_y + (if i == 2 { cell_height } else { 0.0 }),
+                        (top_left_x + dx * CELL_WIDTH) as f32,
+                        (top_left_y + dy * CELL_HEIGHT) as f32,
                     ];
                 }
             }

@@ -121,7 +121,7 @@ fn handle_events(app: &App, cmodel: &mut CompleteModel, event: Event) {
             cmodel.wgpu_model.vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
                 label: None,
                 contents: unsafe { wgpu::bytes::from_slice(model.vertices.as_ref()) },
-                usage:  wgpu::BufferUsages::VERTEX,
+                usage: wgpu::BufferUsages::VERTEX,
             });
 
             handle_mouse_interaction(app, model);
