@@ -267,6 +267,17 @@ impl Model {
     }
 
     pub fn write_to_vertices(&mut self) -> () {
+        const OFFSETS: [(f32, f32); 6] = [
+            // triangle 1
+            (1.0, 0.0), // top right
+            (0.0, 0.0), // top left
+            (0.0, 1.0), // bottom left
+            // triangle 2
+            (0.0, 1.0), // bottom left
+            (1.0, 0.0), // top right
+            (1.0, 1.0), // bottom right
+        ];
+
         const CELL_WIDTH: f32 = 1.0 / GRID_WIDTH_F32;
         const CELL_HEIGHT: f32 = 1.0 / GRID_HEIGHT_F32;
         for (y, row) in self.grid.iter().enumerate() {
@@ -274,21 +285,6 @@ impl Model {
                 let colour = field.get_colour_v3();
                 let top_left_x = f32::from(x as u16) / GRID_WIDTH_F32;
                 let top_left_y = f32::from(y as u16) / GRID_HEIGHT_F32;
-
-                if (y == 0 && x == 0) {
-                    eprintln!("{top_left_y} {top_left_x}");
-                }
-
-                const OFFSETS: [(f32, f32); 6] = [
-                    // triangle 1
-                    (0.0, 0.0), // top left
-                    (0.0, 1.0), // bottom left
-                    (1.0, 0.0), // top right
-                    // triangle 2
-                    (1.0, 0.0), // top right
-                    (0.0, 1.0), // bottom left
-                    (1.0, 1.0), // bottom right
-                ];
 
                 let first_index = (row.len() * y + x) * 6;
 
