@@ -14,6 +14,11 @@ fn main(
 ) -> VertexOutput {
     var out: VertexOutput;
     out.color = model.color;
-    out.clip_position = vec4<f32>(model.position, 1.0, 1.0);
+    out.clip_position = vec4<f32>(
+        model.position.x * 2.0 - 1.0,
+        model.position.y * -2.0 + 1.0,
+        0.0,
+        1.0
+    );
     return out;
 }
