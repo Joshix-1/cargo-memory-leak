@@ -1,22 +1,14 @@
 use crate::field_type::FieldType;
-use crate::get_cell_size_and_display_rect;
 use crate::model::constants::{
-    FIELD_COUNT, GRID_HEIGHT, GRID_HEIGHT_F32, GRID_HEIGHT_USIZE, GRID_WIDTH_F32, GRID_WIDTH_USIZE,
+    FIELD_COUNT, GRID_HEIGHT_F32, GRID_HEIGHT_USIZE, GRID_WIDTH_F32, GRID_WIDTH_USIZE,
 };
 use crate::wgpu_utils::{Vertex, Vertices};
-use itertools::Itertools;
-use nannou::color::DARKGRAY;
-use nannou::window::Window;
-use nannou::Draw;
 use num_traits::FromPrimitive;
-use std::cell::{Ref, RefCell};
 use std::fmt::Debug;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::mem::size_of;
-use std::ops::Deref;
 use std::path::Path;
-use std::rc::Rc;
 use std::slice::SliceIndex;
 use std::{io, slice};
 
@@ -35,13 +27,9 @@ pub mod constants {
 pub type Row = [FieldType; GRID_WIDTH_USIZE];
 pub type Grid = [Row; GRID_HEIGHT_USIZE];
 
-type WindowSize = (f32, f32);
-
 pub struct Model {
     grid: Grid,
-    old_grid: Rc<RefCell<Option<Grid>>>,
     state: u32,
-    last_window_size: Rc<RefCell<Option<WindowSize>>>,
     pub vertices: Box<Vertices>,
 }
 
@@ -50,15 +38,13 @@ impl Default for Model {
     fn default() -> Self {
         let mut grid = [[FieldType::default(); GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE];
         for row in grid.iter_mut() {
-            //*row.first_mut().unwrap() = FieldType::Wood;
-            //*row.last_mut().unwrap() = FieldType::Wood;
+             *row.first_mut().unwrap() = FieldType::Wood;
+             *row.last_mut().unwrap() = FieldType::Wood;
         }
-        //*grid.first_mut().unwrap() = [FieldType::Wood; GRID_WIDTH_USIZE];
+        *grid.first_mut().unwrap() = [FieldType::Wood; GRID_WIDTH_USIZE];
         *grid.last_mut().unwrap() = [FieldType::Wood; GRID_WIDTH_USIZE];
         Model {
             grid,
-            old_grid: Default::default(),
-            last_window_size: Default::default(),
             state: 0xACE1,
             vertices: Box::new(
                 [Vertex {
@@ -86,28 +72,6 @@ impl Model {
             }
         }
         self.state = Model::default().state;
-    }
-
-    #[inline]
-    pub fn force_redraw(&mut self) {
-        *self.old_grid.borrow_mut() = None;
-    }
-
-    #[inline]
-    pub fn has_changed<Y: Into<usize>, X: SliceIndex<[FieldType]> + Clone>(
-        &self,
-        x: X,
-        y: Y,
-    ) -> bool
-    where
-        <X as SliceIndex<[FieldType]>>::Output: PartialEq,
-    {
-        if let Some(old_grid) = self.old_grid.borrow().as_ref() {
-            let y = y.into();
-            old_grid.get(y).and_then(|row| row.get(x.clone())) != self.get(x, y)
-        } else {
-            true
-        }
     }
 
     #[inline]
@@ -221,7 +185,7 @@ impl Model {
                     field_type if field_type.is_sand() => {
                         // sand can fall down
                         let mut default = FieldType::BlackHole;
-                        if {
+                        let res = {
                             let below: &mut FieldType =
                                 self.get_mut(x, y_below).unwrap_or(&mut default);
                             if *below == FieldType::Air {
@@ -230,7 +194,7 @@ impl Model {
                             } else {
                                 *below == FieldType::BlackHole
                             }
-                        } {
+                        }; if res {
                             *self.get_mut(x, y).unwrap() = FieldType::Air;
                         } else {
                             for dx in if self.get_random_bit() {
@@ -240,7 +204,7 @@ impl Model {
                             } {
                                 if let Some(curr_x) = x.checked_add_signed(dx) {
                                     if curr_x != x
-                                        && self.get(curr_x, y).or_else(|| Some(&FieldType::Air))
+                                        && self.get(curr_x, y).or(Some(&FieldType::Air))
                                             != Some(&FieldType::Air)
                                     {
                                         continue;
@@ -266,7 +230,7 @@ impl Model {
         }
     }
 
-    pub fn write_to_vertices(&mut self) -> () {
+    pub fn write_to_vertices(&mut self) {
         const OFFSETS: [(f32, f32); 6] = [
             // triangle 1
             (1.0, 0.0), // top right
@@ -295,71 +259,5 @@ impl Model {
                 }
             }
         }
-    }
-
-    pub fn draw(&self, window: Ref<Window>, draw: &Draw) -> u32 {
-        let mut draw_count: u32 = 0;
-        if self.old_grid.borrow().as_ref() == Some(&self.grid) {
-            return draw_count;
-        }
-        let force_redraw = {
-            if self.old_grid.borrow().as_ref().is_none() {
-                true
-            } else {
-                let window_size: Option<WindowSize> = Some(window.inner_size_points());
-                if window_size.eq(self.last_window_size.borrow().deref()) {
-                    false
-                } else {
-                    *self.last_window_size.borrow_mut() = window_size;
-                    true
-                }
-            }
-        };
-        if force_redraw {
-            draw.background().color(DARKGRAY);
-            draw_count += 1;
-        }
-        let (cell_size, display_rect) = get_cell_size_and_display_rect(window);
-
-        let draw = draw.x_y(
-            display_rect.left() + cell_size / 2f32,
-            display_rect.top() - cell_size / 2f32,
-        );
-
-        for y in 0..GRID_HEIGHT {
-            let draw = draw.y(-<f32 as From<u16>>::from(y) * cell_size);
-            for (value, mut group) in &self
-                .grid
-                .get(y as usize)
-                .unwrap()
-                .iter()
-                .enumerate()
-                .chunk_by(|(_, val)| **val)
-            {
-                let x = {
-                    let (first, _) = group.next().unwrap();
-                    let last = group.last().map(|(i, _)| i).unwrap_or_else(|| first);
-
-                    first..(last + 1)
-                };
-                if !force_redraw && !self.has_changed(x.clone(), y) {
-                    continue;
-                }
-
-                let len: f32 = u16::try_from(x.len()).unwrap().into();
-                draw.rect()
-                    .color(value.get_colour())
-                    .w_h(cell_size * len, cell_size)
-                    .x(
-                        <f32 as From<u16>>::from(u16::try_from(x.start).unwrap()) * cell_size
-                            + (cell_size * (len - 1.0)) / 2.0,
-                    );
-                draw_count += 1;
-            }
-        }
-
-        *self.old_grid.borrow_mut() = Some(self.grid);
-
-        draw_count
     }
 }

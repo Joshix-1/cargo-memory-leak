@@ -11,7 +11,7 @@ pub enum FieldType {
     Wood = 1,
     SandSource = 2,
     BlackHole = 3,
-    SandC0 = 0 << 3 | 0b100,
+    SandC0 = 0b100,
     SandC1 = 1 << 3 | 0b100,
     SandC2 = 2 << 3 | 0b100,
     SandC3 = 3 << 3 | 0b100,

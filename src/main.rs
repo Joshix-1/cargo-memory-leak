@@ -7,10 +7,9 @@ use crate::field_type::FieldType;
 use crate::model::constants::*;
 use crate::model::Model;
 use crate::wgpu_utils::{create_pipeline_layout, create_render_pipeline, WgpuModel};
-use nannou::event::WindowEvent;
 use nannou::geom::Rect;
 use nannou::prelude::{DeviceExt, DroppedFile, KeyReleased, ToPrimitive};
-use nannou::wgpu::{BufferInitDescriptor, BufferSlice};
+use nannou::wgpu::{BufferInitDescriptor};
 use nannou::window::Window;
 use nannou::winit::event::VirtualKeyCode;
 use nannou::{wgpu, App, Event, Frame};
@@ -108,7 +107,6 @@ fn handle_events(app: &App, cmodel: &mut CompleteModel, event: Event) {
                     *model = data
                 }
             }
-            Some(WindowEvent::Resized(_)) => model.force_redraw(),
             _ => (),
         },
         Event::Update(_) => {
@@ -176,4 +174,10 @@ fn view(app: &App, model: &CompleteModel, frame: Frame) {
     let vertex_range = 0..model.model.vertices.len() as u32;
     let instance_range = 0..1;
     render_pass.draw(vertex_range, instance_range);
+
+    let fps = app.fps();
+    if fps < 60.0 {
+        eprintln!("{fps}")
+    }
+
 }
