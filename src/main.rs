@@ -6,14 +6,16 @@ use crate::field_type::FieldType;
 
 use crate::model::constants::*;
 use crate::model::Model;
-use crate::wgpu_utils::{create_pipeline_layout, create_render_pipeline, WgpuModel};
+use crate::wgpu_utils::{create_pipeline_layout, create_render_pipeline, Vertices, WgpuModel};
 use nannou::geom::Rect;
 use nannou::prelude::{DeviceExt, DroppedFile, KeyReleased, Resized, ToPrimitive};
-use nannou::wgpu::BufferInitDescriptor;
+use nannou::wgpu::util::StagingBelt;
+use nannou::wgpu::{BufferInitDescriptor, BufferSize};
 use nannou::window::Window;
 use nannou::winit::event::VirtualKeyCode;
 use nannou::{wgpu, App, Event, Frame};
-use std::cell::Ref;
+use std::cell::{Ref, RefCell};
+use std::rc::Rc;
 
 struct CompleteModel {
     model: Model,
@@ -65,16 +67,18 @@ fn model(app: &App) -> CompleteModel {
 
     let sandrs_model = Model::try_read_from_save(SAVE_FILE).unwrap_or_default();
 
-    let usage = wgpu::BufferUsages::VERTEX;
     let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
         label: None,
         contents: unsafe { wgpu::bytes::from_slice(sandrs_model.vertices.as_ref()) },
-        usage,
+        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
     });
+
+    let staging_belt = Rc::new(RefCell::new(StagingBelt::new(2 * vertex_buffer.size())));
 
     let wgpu_model = WgpuModel {
         render_pipeline,
         vertex_buffer,
+        staging_belt,
     };
 
     CompleteModel {
@@ -114,14 +118,6 @@ fn handle_events(app: &App, cmodel: &mut CompleteModel, event: Event) {
             model.update();
 
             model.write_to_vertices();
-
-            let window = app.main_window();
-            let device = window.device();
-            cmodel.wgpu_model.vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
-                label: None,
-                contents: unsafe { wgpu::bytes::from_slice(model.vertices.as_ref()) },
-                usage: wgpu::BufferUsages::VERTEX,
-            });
 
             handle_mouse_interaction(app, model);
         }
@@ -165,6 +161,28 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
 
 fn view(app: &App, model: &CompleteModel, frame: Frame) {
     let mut encoder = frame.command_encoder();
+
+    let mut staging_belt = model.wgpu_model.staging_belt.borrow_mut();
+    {
+        let mut buf_write = staging_belt.write_buffer(
+            &mut encoder,
+            &model.wgpu_model.vertex_buffer,
+            0,
+            BufferSize::try_from(model.wgpu_model.vertex_buffer.size()).unwrap(),
+            app.window(frame.window_id()).unwrap().device(),
+        );
+
+        let vertices: &Vertices = model.model.vertices.as_ref();
+        for (i, byte) in unsafe { wgpu::bytes::from_slice(vertices.as_ref()) }
+            .iter()
+            .enumerate()
+        {
+            byte.clone_into(buf_write.get_mut(i).unwrap());
+        }
+    }
+
+    staging_belt.finish();
+
     let mut render_pass = wgpu::RenderPassBuilder::new()
         .color_attachment(frame.texture_view(), |color| color)
         .begin(&mut encoder);
@@ -172,11 +190,12 @@ fn view(app: &App, model: &CompleteModel, frame: Frame) {
 
     render_pass.set_vertex_buffer(0, model.wgpu_model.vertex_buffer.slice(..));
     let vertex_range = 0..model.model.vertices.len() as u32;
-    let instance_range = 0..1;
-    render_pass.draw(vertex_range, instance_range);
+    render_pass.draw(vertex_range, 0..1);
 
     let fps = app.fps();
     if fps < 60.0 {
         eprintln!("{fps}")
     }
+
+    staging_belt.recall();
 }
