@@ -1,6 +1,4 @@
-use nannou::color::{Srgb, BLACK, BURLYWOOD, DARKSLATEGRAY, WHITE};
 use num_derive::FromPrimitive;
-use std::marker::PhantomData;
 use std::mem::size_of;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Default, FromPrimitive)]
@@ -53,30 +51,20 @@ impl FieldType {
     }
 
     #[rustfmt::skip]
-    pub const fn get_colour(&self) -> Srgb<u8> {
+    pub const fn get_colour(&self) -> [f32; 3] {
         match self {
-            FieldType::SandC0 => Srgb { red: 255, green: 20, blue: 147, standard: PhantomData },
-            FieldType::SandC1 => Srgb { red: 255, green: 102, blue: 179, standard: PhantomData },
-            FieldType::SandC2 => Srgb { red: 255, green: 163, blue: 194, standard: PhantomData },
-            FieldType::SandC3 => Srgb { red: 255, green: 77, blue: 148, standard: PhantomData },
-            FieldType::SandC4 => Srgb { red: 255, green: 133, blue: 149, standard: PhantomData },
-            FieldType::SandC5 => Srgb { red: 255, green: 128, blue: 161, standard: PhantomData },
-            FieldType::SandC6 => Srgb { red: 255, green: 177, blue: 173, standard: PhantomData },
-            FieldType::SandC7 => Srgb { red: 255, green: 180, blue: 229, standard: PhantomData },
-            FieldType::Air => BLACK,
-            FieldType::Wood => BURLYWOOD,
-            FieldType::SandSource => WHITE,
-            FieldType::BlackHole => DARKSLATEGRAY,
+            FieldType::SandC0 => {const S: [f32; 3] = [255.0 / 255.0, 20.0 / 255.0, 147.0 / 255.0]; S},
+            FieldType::SandC1 => {const S: [f32; 3] = [255.0 / 255.0, 102.0 / 255.0, 179.0 / 255.0]; S},
+            FieldType::SandC2 => {const S: [f32; 3] = [255.0 / 255.0, 163.0 / 255.0, 194.0 / 255.0]; S},
+            FieldType::SandC3 => {const S: [f32; 3] = [255.0 / 255.0, 77.0 / 255.0, 148.0 / 255.0]; S},
+            FieldType::SandC4 => {const S: [f32; 3] = [255.0 / 255.0, 133.0 / 255.0, 149.0 / 255.0]; S},
+            FieldType::SandC5 => {const S: [f32; 3] = [255.0 / 255.0, 128.0 / 255.0, 161.0 / 255.0]; S},
+            FieldType::SandC6 => {const S: [f32; 3] = [255.0 / 255.0, 177.0 / 255.0, 173.0 / 255.0]; S},
+            FieldType::SandC7 => {const S: [f32; 3] = [255.0 / 255.0, 180.0 / 255.0, 229.0 / 255.0]; S},
+            FieldType::Wood => { const WOOD: [f32; 3] = [222.0 / 255.0, 184.0 / 255.0, 135.0 / 255.0]; WOOD }
+            FieldType::Air => [0.0, 0.0, 0.0],         // black
+            FieldType::SandSource => [1.0, 1.0, 1.0],  // white
+            FieldType::BlackHole => [0.2, 0.2, 0.2],   // dark gray
         }
-    }
-
-    pub fn get_colour_v3(&self) -> [f32; 3] {
-        let (r, g, b) = self.get_colour().into_components();
-
-        [
-            f32::from(r) / 255.0,
-            f32::from(g) / 255.0,
-            f32::from(b) / 255.0,
-        ]
     }
 }

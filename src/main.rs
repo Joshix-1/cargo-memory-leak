@@ -7,7 +7,7 @@ use crate::field_type::FieldType;
 use crate::model::constants::*;
 use crate::model::Model;
 use crate::wgpu_utils::{create_pipeline_layout, create_render_pipeline, WgpuModel};
-use nannou::geom::{Rect, Vec2};
+use nannou::geom::Rect;
 use nannou::prelude::{DeviceExt, DroppedFile, KeyReleased, Resized, ToPrimitive};
 use nannou::wgpu::BufferInitDescriptor;
 use nannou::window::Window;
@@ -106,10 +106,8 @@ fn handle_events(app: &App, cmodel: &mut CompleteModel, event: Event) {
                 if let Some(data) = Model::try_read_from_save(path.as_os_str()) {
                     *model = data
                 }
-            },
-            Some(Resized(_)) => {
-                model.resize_window(app.main_window())
             }
+            Some(Resized(_)) => model.resize_window(app.main_window()),
             _ => (),
         },
         Event::Update(_) => {

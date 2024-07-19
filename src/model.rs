@@ -1,9 +1,12 @@
 use crate::field_type::FieldType;
+use crate::get_cell_size_and_display_rect;
 use crate::model::constants::{
     FIELD_COUNT, GRID_HEIGHT_F32, GRID_HEIGHT_USIZE, GRID_WIDTH_F32, GRID_WIDTH_USIZE,
 };
 use crate::wgpu_utils::{Vertex, Vertices};
+use nannou::window::Window;
 use num_traits::FromPrimitive;
+use std::cell::Ref;
 use std::fmt::Debug;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -11,9 +14,6 @@ use std::mem::size_of;
 use std::path::Path;
 use std::slice::SliceIndex;
 use std::{io, slice};
-use std::cell::Ref;
-use nannou::window::Window;
-use crate::get_cell_size_and_display_rect;
 
 pub mod constants {
     pub const GRID_HEIGHT: u16 = 200;
@@ -76,8 +76,8 @@ impl Default for Model {
     fn default() -> Self {
         let mut grid = [[FieldType::default(); GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE];
         for row in grid.iter_mut() {
-             *row.first_mut().unwrap() = FieldType::Wood;
-             *row.last_mut().unwrap() = FieldType::Wood;
+            *row.first_mut().unwrap() = FieldType::Wood;
+            *row.last_mut().unwrap() = FieldType::Wood;
         }
         *grid.first_mut().unwrap() = [FieldType::Wood; GRID_WIDTH_USIZE];
         *grid.last_mut().unwrap() = [FieldType::Wood; GRID_WIDTH_USIZE];
@@ -233,7 +233,8 @@ impl Model {
                             } else {
                                 *below == FieldType::BlackHole
                             }
-                        }; if res {
+                        };
+                        if res {
                             *self.get_mut(x, y).unwrap() = FieldType::Air;
                         } else {
                             for dx in if self.get_random_bit() {
@@ -287,7 +288,7 @@ impl Model {
 
         for (y, row) in self.grid.iter().enumerate() {
             for (x, field) in row.iter().enumerate() {
-                let colour = field.get_colour_v3();
+                let colour = field.get_colour();
 
                 let first_index: usize = (row.len() * y + x) * 6;
 
@@ -295,8 +296,10 @@ impl Model {
                     let vertex = self.vertices.get_mut(first_index + i).unwrap();
                     vertex.color = colour;
                     vertex.position = [
-                        self.grid_dim.top_left_x +  self.grid_dim.width * f32::from(x as u16 + dx) / GRID_WIDTH_F32,
-                        self.grid_dim.top_left_y +  self.grid_dim.height * f32::from(y as u16 + dy) / GRID_HEIGHT_F32,
+                        self.grid_dim.top_left_x
+                            + self.grid_dim.width * f32::from(x as u16 + dx) / GRID_WIDTH_F32,
+                        self.grid_dim.top_left_y
+                            + self.grid_dim.height * f32::from(y as u16 + dy) / GRID_HEIGHT_F32,
                     ];
                 }
             }
