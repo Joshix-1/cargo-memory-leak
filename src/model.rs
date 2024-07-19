@@ -267,16 +267,16 @@ impl Model {
     }
 
     pub fn write_to_vertices(&mut self) -> () {
-        const CELL_WIDTH: f64 = 2.0 / GRID_WIDTH_F32 as f64;
-        const CELL_HEIGHT: f64 = 2.0 / GRID_HEIGHT_F32 as f64;
+        const CELL_WIDTH: f32 = 2.0 / GRID_WIDTH_F32;
+        const CELL_HEIGHT: f32 = 2.0 / GRID_HEIGHT_F32;
         for (y, row) in self.grid.iter().enumerate() {
             for (x, field) in row.iter().enumerate() {
                 let colour = field.get_colour_v3();
                 let first_index = (row.len() * y + x) * 6;
-                let top_left_x = (f64::from(x as u16) / GRID_WIDTH_F32 as f64) * 2.0 - 1.0;
-                let top_left_y = (f64::from(y as u16) / GRID_HEIGHT_F32 as f64) * -2.0 + 1.0;
+                let top_left_x = (f32::from(x as u16) / GRID_WIDTH_F32) * 2.0 - 1.0;
+                let top_left_y = (f32::from(y as u16) / GRID_HEIGHT_F32) * -2.0 + 1.0;
 
-                const OFFSETS: [(f64, f64); 6] = [
+                const OFFSETS: [(f32, f32); 6] = [
                     // triangle 1
                     (0.0, 0.0), // top left
                     (0.0, 1.0), // bottom left
@@ -291,8 +291,8 @@ impl Model {
                     let vertex = self.vertices.get_mut(first_index + i).unwrap();
                     vertex.color = colour;
                     vertex.position = [
-                        (top_left_x + dx * CELL_WIDTH) as f32,
-                        (top_left_y + dy * CELL_HEIGHT) as f32,
+                        (top_left_x + dx * CELL_WIDTH).clamp(-1.0, 1.0),
+                        (top_left_y + dy * CELL_HEIGHT).clamp(-1.0, 1.0),
                     ];
                 }
             }
