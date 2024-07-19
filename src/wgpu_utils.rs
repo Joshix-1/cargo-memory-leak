@@ -1,13 +1,9 @@
 use crate::model::constants::FIELD_COUNT;
 use nannou::wgpu;
-use nannou::wgpu::util::StagingBelt;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 pub(crate) struct WgpuModel {
     pub render_pipeline: wgpu::RenderPipeline,
     pub vertex_buffer: wgpu::Buffer,
-    pub staging_belt: Rc<RefCell<StagingBelt>>,
 }
 
 // The vertex type that we will use to represent a point on our triangle.
