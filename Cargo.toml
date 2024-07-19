@@ -11,7 +11,7 @@ opt-level = 3
 overflow-checks = false
 
 [profile.release]
-codegen-units = 1
+codegen-units = 2
 panic = "abort"
 strip = true
 lto = true
