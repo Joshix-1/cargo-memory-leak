@@ -11,6 +11,9 @@ use std::mem::size_of;
 use std::path::Path;
 use std::slice::SliceIndex;
 use std::{io, slice};
+use std::ops::Deref;
+use nannou::window::Window;
+use crate::get_cell_size_and_display_rect;
 
 pub mod constants {
     pub const GRID_HEIGHT: u16 = 200;
@@ -230,32 +233,43 @@ impl Model {
         }
     }
 
-    pub fn write_to_vertices(&mut self) {
-        const OFFSETS: [(f32, f32); 6] = [
+    pub fn write_to_vertices(&mut self, window: std::cell::Ref<Window>) {
+        const OFFSETS: [(u16, u16); 6] = [
             // triangle 1
-            (1.0, 0.0), // top right
-            (0.0, 0.0), // top left
-            (0.0, 1.0), // bottom left
+            (1, 0), // top right
+            (0, 0), // top left
+            (0, 1), // bottom left
             // triangle 2
-            (0.0, 1.0), // bottom left
-            (1.0, 0.0), // top right
-            (1.0, 1.0), // bottom right
+            (0, 1), // bottom left
+            (1, 0), // top right
+            (1, 1), // bottom right
         ];
 
-        const CELL_WIDTH: f32 = 1.0 / GRID_WIDTH_F32;
-        const CELL_HEIGHT: f32 = 1.0 / GRID_HEIGHT_F32;
+        const W: f32 = 2.0;
+
+        let window_rect = window.rect();
+        let (px_width, px_height) = window.inner_size_points();
+        let (_, rect) = get_cell_size_and_display_rect(window);
+
+        let top_left_x = W * (rect.x.start - window_rect.x.start) / px_width;
+        let top_left_y = W * (rect.y.start - window_rect.y.start) / px_height;
+
+        let width = W * rect.x.len() / px_width;
+        let height = W * rect.y.len() / px_height;
+
         for (y, row) in self.grid.iter().enumerate() {
             for (x, field) in row.iter().enumerate() {
                 let colour = field.get_colour_v3();
-                let top_left_x = f32::from(x as u16) / GRID_WIDTH_F32;
-                let top_left_y = f32::from(y as u16) / GRID_HEIGHT_F32;
 
-                let first_index = (row.len() * y + x) * 6;
+                let first_index: usize = (row.len() * y + x) * 6;
 
                 for (i, (dx, dy)) in OFFSETS.iter().enumerate() {
                     let vertex = self.vertices.get_mut(first_index + i).unwrap();
                     vertex.color = colour;
-                    vertex.position = [top_left_x + dx * CELL_WIDTH, top_left_y + dy * CELL_HEIGHT];
+                    vertex.position = [
+                        top_left_x + width * f32::from(x as u16 + dx) / GRID_WIDTH_F32,
+                        top_left_y + height * f32::from(y as u16 + dy) / GRID_HEIGHT_F32,
+                    ];
                 }
             }
         }

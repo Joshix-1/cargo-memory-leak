@@ -112,7 +112,7 @@ fn handle_events(app: &App, cmodel: &mut CompleteModel, event: Event) {
         Event::Update(_) => {
             model.update();
 
-            model.write_to_vertices();
+            model.write_to_vertices(app.main_window());
 
             let window = app.main_window();
             let device = window.device();
@@ -170,7 +170,6 @@ fn view(app: &App, model: &CompleteModel, frame: Frame) {
     render_pass.set_pipeline(&model.wgpu_model.render_pipeline);
 
     render_pass.set_vertex_buffer(0, model.wgpu_model.vertex_buffer.slice(..));
-    //render_pass.set_viewport(0.0, 0.0, 1.0, 1.0, 0.0, 0.0);
     let vertex_range = 0..model.model.vertices.len() as u32;
     let instance_range = 0..1;
     render_pass.draw(vertex_range, instance_range);
