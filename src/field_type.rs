@@ -69,4 +69,14 @@ impl FieldType {
             FieldType::BlackHole => DARKSLATEGRAY,
         }
     }
+
+    pub fn get_colour_v3(&self) -> [f32; 3] {
+        let (r, g, b) = self.get_colour().into_components();
+
+        [
+            f32::from(r) / 255.0,
+            f32::from(g) / 255.0,
+            f32::from(b) / 255.0,
+        ]
+    }
 }

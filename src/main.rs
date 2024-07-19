@@ -6,11 +6,11 @@ use crate::field_type::FieldType;
 
 use crate::model::constants::*;
 use crate::model::Model;
-use crate::wgpu_utils::{create_pipeline_layout, create_render_pipeline, WgpuModel, VERTICES};
+use crate::wgpu_utils::{create_pipeline_layout, create_render_pipeline, WgpuModel};
 use nannou::event::WindowEvent;
 use nannou::geom::Rect;
 use nannou::prelude::{DeviceExt, DroppedFile, KeyReleased, ToPrimitive};
-use nannou::wgpu::BufferInitDescriptor;
+use nannou::wgpu::{BufferInitDescriptor, BufferSlice};
 use nannou::window::Window;
 use nannou::winit::event::VirtualKeyCode;
 use nannou::{wgpu, App, Event, Frame};
@@ -64,10 +64,12 @@ fn model(app: &App) -> CompleteModel {
         msaa_samples,
     );
 
+    let sandrs_model = Model::try_read_from_save(SAVE_FILE).unwrap_or_default();
+
     let usage = wgpu::BufferUsages::VERTEX;
     let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
         label: None,
-        contents: unsafe { wgpu::bytes::from_slice(&VERTICES) },
+        contents: unsafe { wgpu::bytes::from_slice(sandrs_model.vertices.as_ref()) },
         usage,
     });
 
@@ -77,13 +79,13 @@ fn model(app: &App) -> CompleteModel {
     };
 
     CompleteModel {
-        model: Model::try_read_from_save(SAVE_FILE).unwrap_or_default(),
+        model: sandrs_model,
         wgpu_model,
     }
 }
 
-fn handle_events(app: &App, model: &mut CompleteModel, event: Event) {
-    let model = &mut model.model;
+fn handle_events(app: &App, cmodel: &mut CompleteModel, event: Event) {
+    let model = &mut cmodel.model;
     match event {
         Event::WindowEvent {
             id: _,
@@ -111,6 +113,16 @@ fn handle_events(app: &App, model: &mut CompleteModel, event: Event) {
         },
         Event::Update(_) => {
             model.update();
+
+            model.write_to_vertices();
+
+            let window = app.main_window();
+            let device = window.device();
+            cmodel.wgpu_model.vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
+                label: None,
+                contents: unsafe { wgpu::bytes::from_slice(model.vertices.as_ref()) },
+                usage:  wgpu::BufferUsages::VERTEX,
+            });
 
             handle_mouse_interaction(app, model);
         }
@@ -158,10 +170,10 @@ fn view(app: &App, model: &CompleteModel, frame: Frame) {
         .color_attachment(frame.texture_view(), |color| color)
         .begin(&mut encoder);
     render_pass.set_pipeline(&model.wgpu_model.render_pipeline);
+
     render_pass.set_vertex_buffer(0, model.wgpu_model.vertex_buffer.slice(..));
-    // let (_, rect) = get_cell_size_and_display_rect(app.window(frame.window_id()).unwrap());
-    // render_pass.set_viewport(rect.x.start, rect.y.start, rect.w(), rect.h(), 0.0, 0.0);
-    let vertex_range = 0..VERTICES.len() as u32;
+    //render_pass.set_viewport(0.0, 0.0, 1.0, 1.0, 0.0, 0.0);
+    let vertex_range = 0..model.model.vertices.len() as u32;
     let instance_range = 0..1;
     render_pass.draw(vertex_range, instance_range);
 }

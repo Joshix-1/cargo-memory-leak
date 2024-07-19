@@ -1,4 +1,5 @@
 use nannou::wgpu;
+use crate::model::constants::FIELD_COUNT;
 
 pub(crate) struct WgpuModel {
     pub render_pipeline: wgpu::RenderPipeline,
@@ -9,8 +10,8 @@ pub(crate) struct WgpuModel {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub(crate) struct Vertex {
-    position: [f32; 2],
-    color: [f32; 3],
+    pub(crate) position: [f32; 2],
+    pub(crate) color: [f32; 3],
 }
 
 impl Vertex {
@@ -27,21 +28,7 @@ impl Vertex {
     }
 }
 
-// The vertices that make up the rectangle to which the image will be drawn.
-pub(crate) const VERTICES: [Vertex; 3] = [
-    Vertex {
-        position: [0.0, 0.5],
-        color: [1.0, 0.0, 0.0],
-    },
-    Vertex {
-        position: [-0.5, -0.5],
-        color: [0.0, 1.0, 0.0],
-    },
-    Vertex {
-        position: [0.5, -0.5],
-        color: [0.0, 0.0, 1.0],
-    },
-];
+pub(crate) type Vertices = [Vertex; FIELD_COUNT * 6];
 
 pub(crate) fn create_pipeline_layout(device: &wgpu::Device) -> wgpu::PipelineLayout {
     let desc = wgpu::PipelineLayoutDescriptor {
