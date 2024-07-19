@@ -6,15 +6,15 @@ use crate::field_type::FieldType;
 
 use crate::model::constants::*;
 use crate::model::Model;
+use crate::wgpu_utils::{create_pipeline_layout, create_render_pipeline, WgpuModel, VERTICES};
 use nannou::event::WindowEvent;
 use nannou::geom::Rect;
 use nannou::prelude::{DeviceExt, DroppedFile, KeyReleased, ToPrimitive};
+use nannou::wgpu::BufferInitDescriptor;
 use nannou::window::Window;
 use nannou::winit::event::VirtualKeyCode;
-use nannou::{App, Event, Frame, wgpu};
+use nannou::{wgpu, App, Event, Frame};
 use std::cell::Ref;
-use nannou::wgpu::BufferInitDescriptor;
-use crate::wgpu_utils::{create_pipeline_layout, create_render_pipeline, VERTICES, WgpuModel};
 
 struct CompleteModel {
     model: Model,
@@ -22,9 +22,7 @@ struct CompleteModel {
 }
 
 fn main() {
-    nannou::app(model)
-        .event(handle_events)
-        .run();
+    nannou::app(model).event(handle_events).run();
 }
 
 const SAVE_FILE: &str = "save.dat";
@@ -47,18 +45,14 @@ fn get_cell_size_and_display_rect(window: Ref<Window>) -> (f32, Rect) {
 
 #[inline]
 fn model(app: &App) -> CompleteModel {
-    let w_id = app
-        .new_window()
-        .view(view)
-        .build()
-        .unwrap();
+    let w_id = app.new_window().view(view).build().unwrap();
     let window = app.window(w_id).unwrap();
     let device = window.device();
     let format = Frame::TEXTURE_FORMAT;
     let msaa_samples = window.msaa_samples();
 
-    let vs_mod = device.create_shader_module( wgpu::include_wgsl!("vertex_shader.wgsl"));
-    let fs_mod = device.create_shader_module( wgpu::include_wgsl!("fragment_shader.wgsl"));
+    let vs_mod = device.create_shader_module(wgpu::include_wgsl!("vertex_shader.wgsl"));
+    let fs_mod = device.create_shader_module(wgpu::include_wgsl!("fragment_shader.wgsl"));
 
     let pipeline_layout = create_pipeline_layout(device);
     let render_pipeline = create_render_pipeline(
@@ -86,7 +80,6 @@ fn model(app: &App) -> CompleteModel {
         model: Model::try_read_from_save(SAVE_FILE).unwrap_or_default(),
         wgpu_model,
     }
-
 }
 
 fn handle_events(app: &App, model: &mut CompleteModel, event: Event) {
@@ -158,9 +151,6 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
         }
     }
 }
-
-
-
 
 fn view(app: &App, model: &CompleteModel, frame: Frame) {
     let mut encoder = frame.command_encoder();

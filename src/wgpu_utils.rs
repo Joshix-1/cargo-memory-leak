@@ -10,24 +10,40 @@ pub(crate) struct WgpuModel {
 #[derive(Clone, Copy)]
 pub(crate) struct Vertex {
     position: [f32; 2],
+    color: [f32; 3],
+}
+
+impl Vertex {
+    fn desc() -> wgpu::VertexBufferLayout<'static> {
+        wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<Self>() as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: {
+                const ATTRS: [wgpu::VertexAttribute; 2]  = wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x3];
+
+                &ATTRS
+            },
+        }
+    }
 }
 
 // The vertices that make up the rectangle to which the image will be drawn.
 pub(crate) const VERTICES: [Vertex; 3] = [
     Vertex {
         position: [0.0, 0.5],
+        color: [1.0, 0.0, 0.0],
     },
     Vertex {
         position: [-0.5, -0.5],
+        color: [0.0, 1.0, 0.0],
     },
     Vertex {
         position: [0.5, -0.5],
+        color: [0.0, 0.0, 1.0],
     },
 ];
 
-pub(crate) fn create_pipeline_layout(
-    device: &wgpu::Device
-) -> wgpu::PipelineLayout {
+pub(crate) fn create_pipeline_layout(device: &wgpu::Device) -> wgpu::PipelineLayout {
     let desc = wgpu::PipelineLayoutDescriptor {
         label: None,
         bind_group_layouts: &[],
@@ -48,7 +64,6 @@ pub(crate) fn create_render_pipeline(
     wgpu::RenderPipelineBuilder::from_layout(layout, vs_mod)
         .fragment_shader(fs_mod)
         .color_format(dst_format)
-        .add_vertex_buffer::<Vertex>(&wgpu::vertex_attr_array![0 => Float32x2])
         .sample_count(sample_count)
         .primitive(wgpu::PrimitiveState {
             topology: wgpu::PrimitiveTopology::TriangleList, // 1.
@@ -62,6 +77,7 @@ pub(crate) fn create_render_pipeline(
             // Requires Features::CONSERVATIVE_RASTERIZATION
             conservative: false,
         })
+        .add_vertex_buffer_layout(Vertex::desc())
         .primitive_topology(wgpu::PrimitiveTopology::TriangleStrip)
         .build(device)
 }
