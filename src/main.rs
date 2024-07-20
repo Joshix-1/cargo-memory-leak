@@ -175,9 +175,18 @@ fn view(app: &App, model: &CompleteModel, frame: Frame) {
             wgpu::bytes::from_slice(model.model.vertices.as_ref())
         });
 
+    const LOAD_OP: wgpu::LoadOp<wgpu::Color> = wgpu::LoadOp::Clear(
+        wgpu::Color {
+            r: 0.17,
+            g: 0.17,
+            b: 0.17,
+            a: 1.0,
+        }
+    );
     let mut render_pass = wgpu::RenderPassBuilder::new()
-        .color_attachment(frame.texture_view(), |color| color)
+        .color_attachment(frame.texture_view(), |color| color.load_op(LOAD_OP))
         .begin(&mut encoder);
+
     render_pass.set_pipeline(&model.wgpu_model.render_pipeline);
 
     render_pass.set_vertex_buffer(0, model.wgpu_model.vertex_buffer.slice(..));
