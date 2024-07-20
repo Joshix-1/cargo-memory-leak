@@ -1,11 +1,11 @@
 struct VertexInput {
     @location(0) position: vec2<f32>,
-    @location(1) color: vec3<f32>,
+    @location(1) texture_index: u32,
 };
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
-    @location(0) color: vec3<f32>,
+    @location(0) texture_index: u32,
 };
 
 @vertex
@@ -13,7 +13,7 @@ fn main(
     model: VertexInput,
 ) -> VertexOutput {
     var out: VertexOutput;
-    out.color = model.color;
+    out.texture_index = model.texture_index;
     out.clip_position = vec4<f32>(
         model.position.x - 1.0,
         -model.position.y + 1.0,

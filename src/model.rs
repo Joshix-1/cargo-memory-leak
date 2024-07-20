@@ -88,7 +88,7 @@ impl Default for Model {
             vertices: Box::new(
                 [Vertex {
                     position: [0.0, 0.0],
-                    color: [0.0, 0.0, 0.0],
+                    texture_index: 0,
                 }; size_of::<VertexBuffer>() / size_of::<Vertex>()],
             ),
         }
@@ -288,13 +288,13 @@ impl Model {
 
         for (y, row) in self.grid.iter().enumerate() {
             for (x, field) in row.iter().enumerate() {
-                let colour = field.get_colour();
+                let colour = field.get_texture_index() as u32;
 
                 let first_index: usize = (row.len() * y + x) * 6;
 
                 for (i, (dx, dy)) in OFFSETS.iter().enumerate() {
                     let vertex = self.vertices.get_mut(first_index + i).unwrap();
-                    vertex.color = colour;
+                    vertex.texture_index = colour;
                     vertex.position = [
                         self.grid_dim.top_left_x
                             + self.grid_dim.width * f32::from(x as u16 + dx) / GRID_WIDTH_F32,

@@ -1,32 +1,6 @@
 use num_derive::FromPrimitive;
 use std::mem::size_of;
 
-// https://sotrh.github.io/learn-wgpu/beginner/tutorial4-buffer/#color-correction
-/// Convert SRGB byte value to linear colour space value between 0.0 and 1.0
-macro_rules! colour_correction {
-    ($c:literal) => {{
-        const BYTE: u8 = $c;
-
-        const COLOUR_VALUE: f32 = BYTE as f32;
-
-        const C2: f32 = (COLOUR_VALUE / 255.0 + 0.055) / 1.055;
-
-        f32::powf(C2, 2.4)
-    }};
-}
-
-//
-macro_rules! colour {
-    // `()` indicates that the macro takes no argument.
-    ($r:literal, $g:literal, $b:literal) => {
-        [
-            colour_correction!($r),
-            colour_correction!($g),
-            colour_correction!($b),
-        ]
-    };
-}
-
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Default, FromPrimitive)]
 #[repr(u8)]
 pub enum FieldType {
@@ -48,6 +22,22 @@ pub enum FieldType {
 const _: () = assert!(size_of::<FieldType>() == 1);
 
 impl FieldType {
+    pub(crate) const COUNT: u8 = 12;
+    const ALL: [Self; Self::COUNT as usize] = [
+        Self::Air,
+        Self::Wood,
+        Self::SandSource,
+        Self::BlackHole,
+        Self::SandC0,
+        Self::SandC1,
+        Self::SandC2,
+        Self::SandC3,
+        Self::SandC4,
+        Self::SandC5,
+        Self::SandC6,
+        Self::SandC7,
+    ];
+
     #[inline]
     pub fn sand_from_random_source<R: FnMut() -> bool>(mut get_random_bit: R) -> Self {
         match (get_random_bit(), get_random_bit(), get_random_bit()) {
@@ -60,6 +50,15 @@ impl FieldType {
             (true, true, false) => FieldType::SandC6,
             (true, true, true) => FieldType::SandC7,
         }
+    }
+
+    pub fn get_texture_index(self) -> u8 {
+        for i in 0..Self::COUNT {
+            if Self::ALL[i as usize] == self {
+                return i;
+            }
+        }
+        panic!("Self:ALL doesn't contain {self:?}")
     }
 
     pub const fn is_sand(self) -> bool {
@@ -77,20 +76,36 @@ impl FieldType {
     }
 
     #[inline]
-    pub fn get_colour(&self) -> [f32; 3] {
+    const fn get_colour(&self) -> (u8, u8, u8) {
         match self {
-            FieldType::SandC0 => colour!(255, 20, 147),
-            FieldType::SandC1 => colour!(255, 102, 179),
-            FieldType::SandC2 => colour!(255, 163, 194),
-            FieldType::SandC3 => colour!(255, 77, 148),
-            FieldType::SandC4 => colour!(255, 133, 149),
-            FieldType::SandC5 => colour!(255, 128, 161),
-            FieldType::SandC6 => colour!(255, 177, 173),
-            FieldType::SandC7 => colour!(255, 180, 229),
-            FieldType::Wood => colour!(222, 184, 135),
-            FieldType::Air => colour!(0, 0, 0),
-            FieldType::SandSource => colour!(255, 255, 255),
-            FieldType::BlackHole => colour!(40, 40, 40),
+            Self::SandC0 => (255, 20, 147),
+            Self::SandC1 => (255, 102, 179),
+            Self::SandC2 => (255, 163, 194),
+            Self::SandC3 => (255, 77, 148),
+            Self::SandC4 => (255, 133, 149),
+            Self::SandC5 => (255, 128, 161),
+            Self::SandC6 => (255, 177, 173),
+            Self::SandC7 => (255, 180, 229),
+            Self::Wood => (222, 184, 135),
+            Self::Air => (0, 0, 0),
+            Self::SandSource => (255, 255, 255),
+            Self::BlackHole => (40, 40, 40),
         }
+    }
+
+    pub fn create_texture() -> [u8; 4 * (Self::COUNT as usize)] {
+        let mut texture = [255u8; 4 * (Self::COUNT as usize)];
+
+        for (i, field) in Self::ALL.iter().enumerate() {
+            let tidx = 4 * i;
+
+            let (r, g, b) = field.get_colour();
+            texture[tidx] = r;
+            texture[tidx + 1] = g;
+            texture[tidx + 2] = b;
+            assert_eq!(texture[tidx + 3], 255);  // a
+        }
+
+        texture
     }
 }

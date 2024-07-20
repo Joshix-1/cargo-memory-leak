@@ -1,9 +1,11 @@
 use crate::model::constants::FIELD_COUNT;
 use nannou::wgpu;
+use nannou::wgpu::{BindGroup, BindGroupLayout};
 
 pub(crate) struct WgpuModel {
     pub render_pipeline: wgpu::RenderPipeline,
     pub vertex_buffer: wgpu::Buffer,
+    pub bind_group: BindGroup,
 }
 
 // The vertex type that we will use to represent a point on our triangle.
@@ -11,7 +13,7 @@ pub(crate) struct WgpuModel {
 #[derive(Clone, Copy)]
 pub(crate) struct Vertex {
     pub(crate) position: [f32; 2],
-    pub(crate) color: [f32; 3],
+    pub(crate) texture_index: u32,
 }
 
 impl Vertex {
@@ -21,8 +23,7 @@ impl Vertex {
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: {
                 const ATTRS: [wgpu::VertexAttribute; 2] =
-                    wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x3];
-
+                    wgpu::vertex_attr_array![0 => Float32x2, 1 => Uint32];
                 &ATTRS
             },
         }
@@ -31,10 +32,10 @@ impl Vertex {
 
 pub(crate) type VertexBuffer = [Vertex; FIELD_COUNT * 6];
 
-pub(crate) fn create_pipeline_layout(device: &wgpu::Device) -> wgpu::PipelineLayout {
+pub(crate) fn create_pipeline_layout(device: &wgpu::Device, bind_group_layout: &BindGroupLayout) -> wgpu::PipelineLayout {
     let desc = wgpu::PipelineLayoutDescriptor {
         label: None,
-        bind_group_layouts: &[],
+        bind_group_layouts: &[bind_group_layout],
         push_constant_ranges: &[],
     };
     device.create_pipeline_layout(&desc)
