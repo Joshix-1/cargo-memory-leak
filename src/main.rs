@@ -24,12 +24,12 @@ struct CompleteModel {
 
 fn main() {
     eprintln!(
-        "Size of vertex buffer: {} bytes, {} kib",
+        "Size of vertex buffer: {} bytes, {} kiB",
         size_of::<VertexBuffer>(),
         size_of::<VertexBuffer>() / 1024
     );
     eprintln!(
-        "Size of model        : {} bytes, {} kib",
+        "Size of model        : {} bytes, {} kiB",
         size_of::<CompleteModel>(),
         size_of::<CompleteModel>() / 1024
     );
