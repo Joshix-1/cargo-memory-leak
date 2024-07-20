@@ -6,7 +6,10 @@ use crate::field_type::FieldType;
 
 use crate::model::constants::*;
 use crate::model::Model;
-use crate::wgpu_utils::{create_pipeline_layout, create_render_pipeline, INDEX_BUFFER_SIZE, IndexBuffer, VertexBuffer, WgpuModel};
+use crate::wgpu_utils::{
+    create_pipeline_layout, create_render_pipeline, IndexBuffer, VertexBuffer, WgpuModel,
+    INDEX_BUFFER_SIZE,
+};
 use nannou::geom::Rect;
 use nannou::prelude::{DeviceExt, DroppedFile, KeyReleased, Resized, ToPrimitive};
 use nannou::wgpu::BufferInitDescriptor;
@@ -23,9 +26,6 @@ struct CompleteModel {
 }
 
 fn main() {
-    eprintln!("VertexBuffer size: {}", size_of::<VertexBuffer>());
-    eprintln!("IndexBuffer size: {}", size_of::<IndexBuffer>());
-
     nannou::app(model).event(handle_events).run();
 }
 
@@ -163,13 +163,11 @@ fn model(app: &App) -> CompleteModel {
     });
 
     let index_buffer_data = Model::create_index_buffer();
-    let index_buffer = device.create_buffer_init(
-        &BufferInitDescriptor {
-            label: Some("Index Buffer"),
-            contents: unsafe { wgpu::bytes::from_slice(index_buffer_data.as_slice()) },
-            usage: wgpu::BufferUsages::INDEX,
-        }
-    );
+    let index_buffer = device.create_buffer_init(&BufferInitDescriptor {
+        label: Some("Index Buffer"),
+        contents: unsafe { wgpu::bytes::from_slice(index_buffer_data.as_slice()) },
+        usage: wgpu::BufferUsages::INDEX,
+    });
 
     let wgpu_model = WgpuModel {
         render_pipeline,
@@ -256,7 +254,7 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
     }
 }
 
-fn view(app: &App, model: &CompleteModel, frame: Frame) {
+fn view(_app: &App, model: &CompleteModel, frame: Frame) {
     let mut encoder = frame.command_encoder();
     frame
         .device_queue_pair()
@@ -278,11 +276,9 @@ fn view(app: &App, model: &CompleteModel, frame: Frame) {
     render_pass.set_pipeline(&model.wgpu_model.render_pipeline);
     render_pass.set_bind_group(0, &model.wgpu_model.bind_group, &[]);
     render_pass.set_vertex_buffer(0, model.wgpu_model.vertex_buffer.slice(..));
-    render_pass.set_index_buffer(model.wgpu_model.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-    render_pass.draw_indexed(0..INDEX_BUFFER_SIZE as u32, 0, 0..1);
-
-    let fps = app.fps();
-    if fps < 60.0 {
-        eprintln!("{fps}")
-    }
+    render_pass.set_index_buffer(
+        model.wgpu_model.index_buffer.slice(..),
+        wgpu::IndexFormat::Uint32,
+    );
+    render_pass.draw_indexed(0..INDEX_BUFFER_SIZE, 0, 0..1);
 }

@@ -1,7 +1,9 @@
 use crate::field_type::FieldType;
 use crate::get_cell_size_and_display_rect;
-use crate::model::constants::{FIELD_COUNT, GRID_HEIGHT_F32, GRID_HEIGHT_USIZE, GRID_WIDTH_F32, GRID_WIDTH_USIZE};
-use crate::wgpu_utils::{INDEX_BUFFER_SIZE, IndexBuffer, Vertex, VertexBuffer};
+use crate::model::constants::{
+    FIELD_COUNT, GRID_HEIGHT_F32, GRID_HEIGHT_USIZE, GRID_WIDTH_F32, GRID_WIDTH_USIZE,
+};
+use crate::wgpu_utils::{IndexBuffer, Vertex, VertexBuffer, INDEX_BUFFER_SIZE};
 use nannou::window::Window;
 use num_traits::FromPrimitive;
 use std::cell::Ref;
@@ -282,12 +284,15 @@ impl Model {
     }
 
     pub fn create_index_buffer() -> Box<IndexBuffer> {
-        let mut buffer: Box<IndexBuffer> = vec![0u32; INDEX_BUFFER_SIZE as usize].into_boxed_slice().try_into().unwrap();
+        let mut buffer: Box<IndexBuffer> = vec![0u32; INDEX_BUFFER_SIZE as usize]
+            .into_boxed_slice()
+            .try_into()
+            .unwrap();
 
         for i in 0..FIELD_COUNT as u32 {
             const VALS: [u32; 6] = [1, 0, 2, 2, 1, 3];
             for (j, val) in VALS.into_iter().enumerate() {
-                buffer[(i * 6) as usize + j] =  i * 4 + val;
+                buffer[(i * 6) as usize + j] = i * 4 + val;
             }
         }
 
