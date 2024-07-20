@@ -23,7 +23,7 @@ pub enum FieldType {
 const _: () = assert!(size_of::<FieldType>() == 1);
 
 impl FieldType {
-    const MAX: u8 = FieldType::SandC7 as u8;
+    const MAX: u8 = FieldType::SandC7 as u8 + 1;
 
     #[inline]
     pub fn sand_from_random_source<R: FnMut() -> bool>(mut get_random_bit: R) -> Self {
