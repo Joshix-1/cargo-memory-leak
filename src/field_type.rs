@@ -23,6 +23,8 @@ pub enum FieldType {
 const _: () = assert!(size_of::<FieldType>() == 1);
 
 impl FieldType {
+    const MAX: u8 = FieldType::SandC7 as u8;
+
     #[inline]
     pub fn sand_from_random_source<R: FnMut() -> bool>(mut get_random_bit: R) -> Self {
         match (get_random_bit(), get_random_bit(), get_random_bit()) {
@@ -74,10 +76,10 @@ impl FieldType {
         }
     }
 
-    pub fn create_texture() -> [u8; u8::MAX as usize * 4] {
-        let mut texture = [100u8; u8::MAX as usize * 4];
+    pub fn create_texture() -> [u8; Self::MAX as usize * 4] {
+        let mut texture = [69u8; Self::MAX as usize * 4];
 
-        for i in 0..u8::MAX {
+        for i in 0..Self::MAX {
             if let Some(field) = FieldType::from_u8(i) {
                 let tidx = i as usize * 4;
 
