@@ -1,6 +1,32 @@
 use num_derive::FromPrimitive;
 use std::mem::size_of;
 
+// https://sotrh.github.io/learn-wgpu/beginner/tutorial4-buffer/#color-correction
+/// Convert SRGB byte value to linear colour space value between 0.0 and 1.0
+macro_rules! colour_correction {
+    ($c:literal) => {{
+        const BYTE: u8 = $c;
+
+        const COLOUR_VALUE: f32 = BYTE as f32;
+
+        const C2: f32 = (COLOUR_VALUE / 255.0 + 0.055) / 1.055;
+
+        f32::powf(C2, 2.4)
+    }};
+}
+
+//
+macro_rules! colour {
+    // `()` indicates that the macro takes no argument.
+    ($r:literal, $g:literal, $b:literal) => {
+        [
+            colour_correction!($r),
+            colour_correction!($g),
+            colour_correction!($b),
+        ]
+    };
+}
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Default, FromPrimitive)]
 #[repr(u8)]
 pub enum FieldType {
@@ -50,21 +76,21 @@ impl FieldType {
         )
     }
 
-    #[rustfmt::skip]
-    pub const fn get_colour(&self) -> [f32; 3] {
+    #[inline]
+    pub fn get_colour(&self) -> [f32; 3] {
         match self {
-            FieldType::SandC0 => {const S: [f32; 3] = [255.0 / 255.0, 20.0 / 255.0, 147.0 / 255.0]; S},
-            FieldType::SandC1 => {const S: [f32; 3] = [255.0 / 255.0, 102.0 / 255.0, 179.0 / 255.0]; S},
-            FieldType::SandC2 => {const S: [f32; 3] = [255.0 / 255.0, 163.0 / 255.0, 194.0 / 255.0]; S},
-            FieldType::SandC3 => {const S: [f32; 3] = [255.0 / 255.0, 77.0 / 255.0, 148.0 / 255.0]; S},
-            FieldType::SandC4 => {const S: [f32; 3] = [255.0 / 255.0, 133.0 / 255.0, 149.0 / 255.0]; S},
-            FieldType::SandC5 => {const S: [f32; 3] = [255.0 / 255.0, 128.0 / 255.0, 161.0 / 255.0]; S},
-            FieldType::SandC6 => {const S: [f32; 3] = [255.0 / 255.0, 177.0 / 255.0, 173.0 / 255.0]; S},
-            FieldType::SandC7 => {const S: [f32; 3] = [255.0 / 255.0, 180.0 / 255.0, 229.0 / 255.0]; S},
-            FieldType::Wood => { const WOOD: [f32; 3] = [222.0 / 255.0, 184.0 / 255.0, 135.0 / 255.0]; WOOD }
-            FieldType::Air => [0.0, 0.0, 0.0],         // black
-            FieldType::SandSource => [1.0, 1.0, 1.0],  // white
-            FieldType::BlackHole => [0.2, 0.2, 0.2],   // dark gray
+            FieldType::SandC0 => colour!(255, 20, 147),
+            FieldType::SandC1 => colour!(255, 102, 179),
+            FieldType::SandC2 => colour!(255, 163, 194),
+            FieldType::SandC3 => colour!(255, 77, 148),
+            FieldType::SandC4 => colour!(255, 133, 149),
+            FieldType::SandC5 => colour!(255, 128, 161),
+            FieldType::SandC6 => colour!(255, 177, 173),
+            FieldType::SandC7 => colour!(255, 180, 229),
+            FieldType::Wood => colour!(222, 184, 135),
+            FieldType::Air => colour!(0, 0, 0),
+            FieldType::SandSource => colour!(255, 255, 255),
+            FieldType::BlackHole => colour!(40, 40, 40),
         }
     }
 }
