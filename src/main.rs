@@ -7,8 +7,7 @@ use crate::field_type::FieldType;
 use crate::model::constants::*;
 use crate::model::Model;
 use crate::wgpu_utils::{
-    create_pipeline_layout, create_render_pipeline, IndexBuffer, VertexBuffer, WgpuModel,
-    INDEX_BUFFER_SIZE,
+    create_pipeline_layout, create_render_pipeline, WgpuModel, INDEX_BUFFER_SIZE,
 };
 use nannou::geom::Rect;
 use nannou::prelude::{DeviceExt, DroppedFile, KeyReleased, Resized, ToPrimitive};
@@ -17,7 +16,6 @@ use nannou::window::Window;
 use nannou::winit::event::VirtualKeyCode;
 use nannou::{wgpu, App, Event, Frame};
 use std::cell::Ref;
-use std::mem::size_of;
 use wgpu_types::{SamplerBindingType, TextureFormat, TextureViewDimension};
 
 struct CompleteModel {
@@ -84,7 +82,7 @@ fn model(app: &App) -> CompleteModel {
     let texture_data = FieldType::create_texture();
 
     let texture_size = wgpu::Extent3d {
-        width: FieldType::COUNT as u32,
+        width: texture_data.len() as u32 / 4,
         height: 1,
         depth_or_array_layers: 1,
     };

@@ -1,4 +1,5 @@
 use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 use std::mem::size_of;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Default, FromPrimitive)]
@@ -22,22 +23,6 @@ pub enum FieldType {
 const _: () = assert!(size_of::<FieldType>() == 1);
 
 impl FieldType {
-    pub(crate) const COUNT: u8 = 12;
-    const ALL: [Self; Self::COUNT as usize] = [
-        Self::Air,
-        Self::Wood,
-        Self::SandSource,
-        Self::BlackHole,
-        Self::SandC0,
-        Self::SandC1,
-        Self::SandC2,
-        Self::SandC3,
-        Self::SandC4,
-        Self::SandC5,
-        Self::SandC6,
-        Self::SandC7,
-    ];
-
     #[inline]
     pub fn sand_from_random_source<R: FnMut() -> bool>(mut get_random_bit: R) -> Self {
         match (get_random_bit(), get_random_bit(), get_random_bit()) {
@@ -52,13 +37,9 @@ impl FieldType {
         }
     }
 
+    #[inline]
     pub fn get_texture_index(self) -> u8 {
-        for i in 0..Self::COUNT {
-            if Self::ALL[i as usize] == self {
-                return i;
-            }
-        }
-        panic!("Self:ALL doesn't contain {self:?}")
+        self as u8
     }
 
     pub const fn is_sand(self) -> bool {
@@ -93,17 +74,19 @@ impl FieldType {
         }
     }
 
-    pub fn create_texture() -> [u8; 4 * (Self::COUNT as usize)] {
-        let mut texture = [255u8; 4 * (Self::COUNT as usize)];
+    pub fn create_texture() -> [u8; u8::MAX as usize * 4] {
+        let mut texture = [100u8; u8::MAX as usize * 4];
 
-        for (i, field) in Self::ALL.iter().enumerate() {
-            let tidx = 4 * i;
+        for i in 0..u8::MAX {
+            if let Some(field) = FieldType::from_u8(i) {
+                let tidx = i as usize * 4;
 
-            let (r, g, b) = field.get_colour();
-            texture[tidx] = r;
-            texture[tidx + 1] = g;
-            texture[tidx + 2] = b;
-            assert_eq!(texture[tidx + 3], 255); // a
+                let (r, g, b) = field.get_colour();
+                texture[tidx] = r;
+                texture[tidx + 1] = g;
+                texture[tidx + 2] = b;
+                texture[tidx + 3] = 255; // a
+            }
         }
 
         texture
