@@ -103,7 +103,7 @@ impl FieldType {
             texture[tidx] = r;
             texture[tidx + 1] = g;
             texture[tidx + 2] = b;
-            assert_eq!(texture[tidx + 3], 255);  // a
+            assert_eq!(texture[tidx + 3], 255); // a
         }
 
         texture

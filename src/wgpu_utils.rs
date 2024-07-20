@@ -10,7 +10,7 @@ pub(crate) struct WgpuModel {
 
 // The vertex type that we will use to represent a point on our triangle.
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) struct Vertex {
     pub(crate) position: [f32; 2],
     pub(crate) texture_index: u32,
@@ -32,7 +32,10 @@ impl Vertex {
 
 pub(crate) type VertexBuffer = [Vertex; FIELD_COUNT * 6];
 
-pub(crate) fn create_pipeline_layout(device: &wgpu::Device, bind_group_layout: &BindGroupLayout) -> wgpu::PipelineLayout {
+pub(crate) fn create_pipeline_layout(
+    device: &wgpu::Device,
+    bind_group_layout: &BindGroupLayout,
+) -> wgpu::PipelineLayout {
     let desc = wgpu::PipelineLayoutDescriptor {
         label: None,
         bind_group_layouts: &[bind_group_layout],

@@ -6,7 +6,7 @@ use crate::field_type::FieldType;
 
 use crate::model::constants::*;
 use crate::model::Model;
-use crate::wgpu_utils::{create_pipeline_layout, create_render_pipeline, VertexBuffer, WgpuModel};
+use crate::wgpu_utils::{create_pipeline_layout, create_render_pipeline, WgpuModel};
 use nannou::geom::Rect;
 use nannou::prelude::{DeviceExt, DroppedFile, KeyReleased, Resized, ToPrimitive};
 use nannou::wgpu::BufferInitDescriptor;
@@ -14,7 +14,6 @@ use nannou::window::Window;
 use nannou::winit::event::VirtualKeyCode;
 use nannou::{wgpu, App, Event, Frame};
 use std::cell::Ref;
-use std::mem::size_of;
 use wgpu_types::{SamplerBindingType, TextureFormat, TextureViewDimension};
 
 struct CompleteModel {
@@ -23,17 +22,6 @@ struct CompleteModel {
 }
 
 fn main() {
-    eprintln!(
-        "Size of vertex buffer: {} bytes, {} kiB",
-        size_of::<VertexBuffer>(),
-        size_of::<VertexBuffer>() / 1024
-    );
-    eprintln!(
-        "Size of model        : {} bytes, {} kiB",
-        size_of::<CompleteModel>(),
-        size_of::<CompleteModel>() / 1024
-    );
-
     nannou::app(model).event(handle_events).run();
 }
 
@@ -97,18 +85,16 @@ fn model(app: &App) -> CompleteModel {
         depth_or_array_layers: 1,
     };
 
-    let texture = device.create_texture(
-        &wgpu::TextureDescriptor {
-            size: texture_size,
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D1,
-            format: wgpu::TextureFormat::Rgba8UnormSrgb,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            label: Some("diffuse_texture"),
-            view_formats: &[],
-        }
-    );
+    let texture = device.create_texture(&wgpu::TextureDescriptor {
+        size: texture_size,
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D1,
+        format: wgpu::TextureFormat::Rgba8UnormSrgb,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+        label: Some("diffuse_texture"),
+        view_formats: &[],
+    });
 
     let queue = window.queue();
     queue.write_texture(
@@ -139,22 +125,20 @@ fn model(app: &App) -> CompleteModel {
         ..Default::default()
     });
 
-    let texture_bind_group = device.create_bind_group(
-        &wgpu::BindGroupDescriptor {
-            layout: &texture_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&diffuse_texture_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&diffuse_sampler),
-                }
-            ],
-            label: Some("diffuse_bind_group"),
-        }
-    );
+    let texture_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        layout: &texture_bind_group_layout,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::TextureView(&diffuse_texture_view),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: wgpu::BindingResource::Sampler(&diffuse_sampler),
+            },
+        ],
+        label: Some("diffuse_bind_group"),
+    });
 
     let pipeline_layout = create_pipeline_layout(device, &texture_bind_group_layout);
     let render_pipeline = create_render_pipeline(
@@ -173,7 +157,6 @@ fn model(app: &App) -> CompleteModel {
         contents: unsafe { wgpu::bytes::from_slice(sandrs_model.vertices.as_ref()) },
         usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
     });
-
 
     let wgpu_model = WgpuModel {
         render_pipeline,
@@ -268,14 +251,12 @@ fn view(app: &App, model: &CompleteModel, frame: Frame) {
             wgpu::bytes::from_slice(model.model.vertices.as_ref())
         });
 
-    const LOAD_OP: wgpu::LoadOp<wgpu::Color> = wgpu::LoadOp::Clear(
-        wgpu::Color {
-            r: 0.17,
-            g: 0.17,
-            b: 0.17,
-            a: 1.0,
-        }
-    );
+    const LOAD_OP: wgpu::LoadOp<wgpu::Color> = wgpu::LoadOp::Clear(wgpu::Color {
+        r: 0.17,
+        g: 0.17,
+        b: 0.17,
+        a: 1.0,
+    });
     let mut render_pass = wgpu::RenderPassBuilder::new()
         .color_attachment(frame.texture_view(), |color| color.load_op(LOAD_OP))
         .begin(&mut encoder);

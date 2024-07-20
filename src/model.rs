@@ -65,7 +65,7 @@ impl GridDisplayDimensions {
 }
 
 pub struct Model {
-    grid: Grid,
+    grid: Box<Grid>,
     state: u32,
     grid_dim: GridDisplayDimensions,
     pub vertices: Box<VertexBuffer>,
@@ -74,7 +74,10 @@ pub struct Model {
 impl Default for Model {
     #[inline]
     fn default() -> Self {
-        let mut grid = [[FieldType::default(); GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE];
+        let mut grid: Box<Grid> = vec![[FieldType::default(); GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE]
+            .into_boxed_slice()
+            .try_into()
+            .unwrap();
         for row in grid.iter_mut() {
             *row.first_mut().unwrap() = FieldType::Wood;
             *row.last_mut().unwrap() = FieldType::Wood;
@@ -85,12 +88,16 @@ impl Default for Model {
             grid,
             state: 0xACE1,
             grid_dim: Default::default(),
-            vertices: Box::new(
-                [Vertex {
+            vertices: vec![
+                Vertex {
                     position: [0.0, 0.0],
                     texture_index: 0,
-                }; size_of::<VertexBuffer>() / size_of::<Vertex>()],
-            ),
+                };
+                size_of::<VertexBuffer>() / size_of::<Vertex>()
+            ]
+            .into_boxed_slice()
+            .try_into()
+            .unwrap(),
         }
     }
 }
@@ -149,7 +156,7 @@ impl Model {
             }
         }
         Model {
-            grid: unsafe { *(&data as *const [u8; FIELD_COUNT] as *const Grid) },
+            grid: Box::new(unsafe { *(&data as *const [u8; FIELD_COUNT] as *const Grid) }),
             ..Default::default()
         }
     }
