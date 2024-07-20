@@ -272,10 +272,14 @@ impl Model {
 
     pub(crate) fn resize_window(&mut self, window: Ref<Window>) {
         self.grid_dim = GridDisplayDimensions::new(window);
+
+        self.write_position_to_vertices();
     }
 
-    pub fn write_to_vertices(&mut self) {
-        const OFFSETS: [(u16, u16); 6] = [
+    const VERTICES_PER_CELL: usize = 6;
+
+    fn write_position_to_vertices(&mut self) {
+        const OFFSETS: [(u16, u16); Model::VERTICES_PER_CELL] = [
             // triangle 1
             (1, 0), // top right
             (0, 0), // top left
@@ -287,20 +291,32 @@ impl Model {
         ];
 
         for (y, row) in self.grid.iter().enumerate() {
-            for (x, field) in row.iter().enumerate() {
-                let colour = field.get_texture_index() as u32;
-
+            for x in 0..row.len() {
                 let first_index: usize = (row.len() * y + x) * 6;
 
                 for (i, (dx, dy)) in OFFSETS.iter().enumerate() {
                     let vertex = self.vertices.get_mut(first_index + i).unwrap();
-                    vertex.texture_index = colour;
                     vertex.position = [
                         self.grid_dim.top_left_x
                             + self.grid_dim.width * f32::from(x as u16 + dx) / GRID_WIDTH_F32,
                         self.grid_dim.top_left_y
                             + self.grid_dim.height * f32::from(y as u16 + dy) / GRID_HEIGHT_F32,
                     ];
+                }
+            }
+        }
+    }
+
+    pub fn write_to_vertices(&mut self) {
+        for (y, row) in self.grid.iter().enumerate() {
+            for (x, field) in row.iter().enumerate() {
+                let colour = field.get_texture_index() as u32;
+
+                let first_index: usize = (row.len() * y + x) * 6;
+
+                for i in 0..Self::VERTICES_PER_CELL {
+                    let vertex = self.vertices.get_mut(first_index + i).unwrap();
+                    vertex.texture_index = colour;
                 }
             }
         }
