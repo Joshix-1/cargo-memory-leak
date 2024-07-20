@@ -5,6 +5,7 @@ use nannou::wgpu::{BindGroup, BindGroupLayout};
 pub(crate) struct WgpuModel {
     pub render_pipeline: wgpu::RenderPipeline,
     pub vertex_buffer: wgpu::Buffer,
+    pub index_buffer: wgpu::Buffer,
     pub bind_group: BindGroup,
 }
 
@@ -30,7 +31,12 @@ impl Vertex {
     }
 }
 
-pub(crate) type VertexBuffer = [Vertex; FIELD_COUNT * 6];
+/// 4 for every cell
+/// top-left, top-right, bottom-left, bottom-right
+pub(crate) type VertexBuffer = [Vertex; FIELD_COUNT * 4];
+/// 2 triangles per cell
+pub(crate) const INDEX_BUFFER_SIZE: u32 = (FIELD_COUNT * 6) as u32;
+pub(crate) type IndexBuffer = [u32; INDEX_BUFFER_SIZE as usize];
 
 pub(crate) fn create_pipeline_layout(
     device: &wgpu::Device,
