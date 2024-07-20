@@ -29,7 +29,7 @@ impl Vertex {
     }
 }
 
-pub(crate) type Vertices = [Vertex; FIELD_COUNT * 6];
+pub(crate) type VertexBuffer = [Vertex; FIELD_COUNT * 6];
 
 pub(crate) fn create_pipeline_layout(device: &wgpu::Device) -> wgpu::PipelineLayout {
     let desc = wgpu::PipelineLayoutDescriptor {

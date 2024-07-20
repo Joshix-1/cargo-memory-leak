@@ -3,7 +3,7 @@ use crate::get_cell_size_and_display_rect;
 use crate::model::constants::{
     FIELD_COUNT, GRID_HEIGHT_F32, GRID_HEIGHT_USIZE, GRID_WIDTH_F32, GRID_WIDTH_USIZE,
 };
-use crate::wgpu_utils::{Vertex, Vertices};
+use crate::wgpu_utils::{Vertex, VertexBuffer};
 use nannou::window::Window;
 use num_traits::FromPrimitive;
 use std::cell::Ref;
@@ -68,7 +68,7 @@ pub struct Model {
     grid: Grid,
     state: u32,
     grid_dim: GridDisplayDimensions,
-    pub vertices: Box<Vertices>,
+    pub vertices: Box<VertexBuffer>,
 }
 
 impl Default for Model {
@@ -89,7 +89,7 @@ impl Default for Model {
                 [Vertex {
                     position: [0.0, 0.0],
                     color: [0.0, 0.0, 0.0],
-                }; size_of::<Vertices>() / size_of::<Vertex>()],
+                }; size_of::<VertexBuffer>() / size_of::<Vertex>()],
             ),
         }
     }
