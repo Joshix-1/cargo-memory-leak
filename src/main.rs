@@ -6,7 +6,7 @@ use crate::field_type::FieldType;
 
 use crate::model::constants::*;
 use crate::model::Model;
-use crate::wgpu_utils::{create_pipeline_layout, create_render_pipeline, WgpuModel};
+use crate::wgpu_utils::{create_pipeline_layout, create_render_pipeline, VertexBuffer, WgpuModel};
 use nannou::geom::Rect;
 use nannou::prelude::{DeviceExt, DroppedFile, KeyReleased, Resized, ToPrimitive};
 use nannou::wgpu::BufferInitDescriptor;
@@ -14,6 +14,7 @@ use nannou::window::Window;
 use nannou::winit::event::VirtualKeyCode;
 use nannou::{wgpu, App, Event, Frame};
 use std::cell::Ref;
+use std::mem::size_of;
 
 struct CompleteModel {
     model: Model,
@@ -21,6 +22,17 @@ struct CompleteModel {
 }
 
 fn main() {
+    eprintln!(
+        "Size of vertex buffer: {} bytes, {} kib",
+        size_of::<VertexBuffer>(),
+        size_of::<VertexBuffer>() / 1024
+    );
+    eprintln!(
+        "Size of model        : {} bytes, {} kib",
+        size_of::<CompleteModel>(),
+        size_of::<CompleteModel>() / 1024
+    );
+
     nannou::app(model).event(handle_events).run();
 }
 
