@@ -170,11 +170,14 @@ impl Model {
     pub fn change_ptr_size(&mut self, increase: bool) -> Option<()> {
         self.pointer_size = if increase {
             const MAX_SIZE: NonZeroU32 = unsafe {
-                NonZeroU32::new_unchecked(if GRID_WIDTH > GRID_HEIGHT {
-                    GRID_WIDTH
-                } else {
-                    GRID_HEIGHT
-                } as u32 / 2)
+                NonZeroU32::new_unchecked(
+                    if GRID_WIDTH > GRID_HEIGHT {
+                        GRID_WIDTH
+                    } else {
+                        GRID_HEIGHT
+                    } as u32
+                        / 2,
+                )
             };
             const _: () = assert!(MAX_SIZE.get() > 0, "invalid constant");
             self.pointer_size.saturating_add(1).min(MAX_SIZE)
