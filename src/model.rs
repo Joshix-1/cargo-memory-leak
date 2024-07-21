@@ -1,8 +1,10 @@
 use crate::field_type::FieldType;
 use crate::get_cell_size_and_display_rect;
 use crate::model::constants::{
-    FIELD_COUNT, GRID_HEIGHT_F32, GRID_HEIGHT_USIZE, GRID_WIDTH_F32, GRID_WIDTH_USIZE,
+    FIELD_COUNT, GRID_HEIGHT, GRID_HEIGHT_F32, GRID_HEIGHT_USIZE, GRID_WIDTH, GRID_WIDTH_F32,
+    GRID_WIDTH_USIZE,
 };
+use crate::spiral_iter::SpiralIter;
 use crate::wgpu_utils::{IndexBuffer, Vertex, VertexBuffer, INDEX_BUFFER_SIZE};
 use nannou::window::Window;
 use num_traits::FromPrimitive;
@@ -11,6 +13,7 @@ use std::fmt::Debug;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::mem::size_of;
+use std::num::NonZeroU32;
 use std::path::Path;
 use std::slice::SliceIndex;
 use std::{io, slice};
@@ -69,6 +72,7 @@ pub struct Model {
     state: u32,
     grid_dim: GridDisplayDimensions,
     pub vertices: Box<VertexBuffer>,
+    pointer_size: NonZeroU32,
 }
 
 impl Default for Model {
@@ -98,6 +102,7 @@ impl Default for Model {
             .into_boxed_slice()
             .try_into()
             .unwrap(),
+            pointer_size: NonZeroU32::new(1).unwrap(),
         }
     }
 }
@@ -117,7 +122,6 @@ impl Model {
                 }
             }
         }
-        self.state = Model::default().state;
     }
 
     #[inline]
@@ -134,6 +138,50 @@ impl Model {
         self.grid
             .get_mut(y.into())
             .and_then(|row| row.get_mut(x.into()))
+    }
+
+    #[inline]
+    pub fn get_mut_opt(&mut self, x: Option<usize>, y: Option<usize>) -> Option<&mut FieldType> {
+        self.grid.get_mut(y?).and_then(|row| row.get_mut(x?))
+    }
+
+    #[inline]
+    pub fn place_at(&mut self, x: usize, y: usize, mut field_type: FieldType) {
+        let count = usize::try_from(
+            self.pointer_size
+                .get()
+                .saturating_mul(self.pointer_size.get()),
+        )
+        .unwrap();
+        for (dx, dy) in SpiralIter::new(count) {
+            if field_type.is_sand() {
+                field_type = FieldType::sand_from_random_source(|| self.get_random_bit());
+            }
+
+            if let Some(field) =
+                self.get_mut_opt(x.checked_add_signed(dx), y.checked_add_signed(dy))
+            {
+                *field = field_type;
+            }
+        }
+    }
+
+    #[inline]
+    pub fn change_ptr_size(&mut self, increase: bool) -> Option<()> {
+        self.pointer_size = if increase {
+            const MAX_SIZE: NonZeroU32 = unsafe {
+                NonZeroU32::new_unchecked(if GRID_WIDTH > GRID_HEIGHT {
+                    GRID_WIDTH
+                } else {
+                    GRID_HEIGHT
+                } as u32 / 2)
+            };
+            const _: () = assert!(MAX_SIZE.get() > 0, "invalid constant");
+            self.pointer_size.saturating_add(1).min(MAX_SIZE)
+        } else {
+            NonZeroU32::new(self.pointer_size.get() - 1)?
+        };
+        Some(())
     }
 
     #[inline]

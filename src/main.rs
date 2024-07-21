@@ -1,5 +1,6 @@
 mod field_type;
 mod model;
+mod spiral_iter;
 mod wgpu_utils;
 
 use crate::field_type::FieldType;
@@ -9,10 +10,12 @@ use crate::model::Model;
 use crate::wgpu_utils::{
     create_pipeline_layout, create_render_pipeline, WgpuModel, INDEX_BUFFER_SIZE,
 };
+use nannou::event::MouseScrollDelta;
 use nannou::geom::Rect;
-use nannou::prelude::{DeviceExt, DroppedFile, KeyReleased, Resized, ToPrimitive};
+use nannou::prelude::{DeviceExt, DroppedFile, KeyReleased, MouseWheel, Resized, ToPrimitive};
 use nannou::wgpu::BufferInitDescriptor;
 use nannou::window::Window;
+use nannou::winit::dpi::PhysicalPosition;
 use nannou::winit::event::VirtualKeyCode;
 use nannou::{wgpu, App, Event, Frame};
 use std::cell::Ref;
@@ -199,6 +202,15 @@ fn handle_events(app: &App, cmodel: &mut CompleteModel, event: Event) {
                 VirtualKeyCode::C => model.replace_sand_with_air(),
                 _ => (),
             },
+            Some(MouseWheel(delta, _)) => {
+                let down = match delta {
+                    MouseScrollDelta::LineDelta(_, y) => y.is_sign_positive(),
+                    MouseScrollDelta::PixelDelta(PhysicalPosition { x: _, y }) => {
+                        y.is_sign_positive()
+                    }
+                };
+                model.change_ptr_size(down).unwrap_or_default()
+            }
             Some(DroppedFile(path)) => {
                 if let Some(data) = Model::try_read_from_save(path.as_os_str()) {
                     *model = data
@@ -221,7 +233,7 @@ fn handle_events(app: &App, cmodel: &mut CompleteModel, event: Event) {
 #[inline]
 fn handle_mouse_interaction(app: &App, model: &mut Model) {
     let field_type_to_set: FieldType = if app.mouse.buttons.left().is_down() {
-        FieldType::sand_from_random_source(|| model.get_random_bit())
+        FieldType::SandC0
     } else if app.mouse.buttons.right().is_down() {
         FieldType::Air
     } else if app.mouse.buttons.middle().is_down() {
@@ -246,9 +258,7 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
             .to_usize()
             .unwrap();
 
-        if let Some(value) = model.get_mut(x, y) {
-            *value = field_type_to_set;
-        }
+        model.place_at(x, y, field_type_to_set);
     }
 }
 
