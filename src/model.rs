@@ -361,19 +361,23 @@ impl Model {
             (1, 1),
         ];
 
-        for (y, row) in self.grid.iter().enumerate() {
-            for x in 0..row.len() {
-                let first_index: usize = (row.len() * y + x) * OFFSETS.len();
 
-                for (i, (dx, dy)) in OFFSETS.iter().enumerate() {
-                    let vertex = self.vertices.get_mut(first_index + i).unwrap();
-                    vertex.position = [
-                        self.grid_dim.top_left_x
-                            + self.grid_dim.width * f32::from(x as u16 + dx) / GRID_WIDTH_F32,
-                        self.grid_dim.top_left_y
-                            + self.grid_dim.height * f32::from(y as u16 + dy) / GRID_HEIGHT_F32,
-                    ];
-                }
+        let mut x: u16 = 0;
+        let mut y: u16 = 0;
+        for i in 0..FIELD_COUNT {
+            for (j, (dx, dy)) in OFFSETS.into_iter().enumerate() {
+                let vertex = self.vertices.get_mut(i * OFFSETS.len() + j).unwrap();
+                vertex.position = [
+                    self.grid_dim.top_left_x
+                        + self.grid_dim.width * f32::from(x + dx) / GRID_WIDTH_F32,
+                    self.grid_dim.top_left_y
+                        + self.grid_dim.height * f32::from(y + dy) / GRID_HEIGHT_F32,
+                ];
+            }
+            x += 1;
+            x %= GRID_WIDTH;
+            if x == 0 {
+                y += 1;
             }
         }
     }
