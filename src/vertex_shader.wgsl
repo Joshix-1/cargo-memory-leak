@@ -21,7 +21,7 @@ fn main(
         t,
         vec2<u32>(
             cell_idx % {width}u,
-            cell_idx / {height}u
+            cell_idx / {width}u
         ),
         0
     ).x;

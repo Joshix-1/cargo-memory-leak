@@ -63,7 +63,7 @@ fn model(app: &App) -> CompleteModel {
     let vs_mod = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("vertex_shader.wgsl"),
         source: wgpu::ShaderSource::Wgsl(
-            format!("{}", format_args!(include_str!("vertex_shader.wgsl"), width=GRID_WIDTH, height=GRID_HEIGHT)).into()
+            format!("{}", format_args!(include_str!("vertex_shader.wgsl"), width=GRID_WIDTH)).into()
         ),
     });
     let fs_mod = device.create_shader_module(wgpu::include_wgsl!("fragment_shader.wgsl"));

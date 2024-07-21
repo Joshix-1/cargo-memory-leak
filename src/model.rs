@@ -20,7 +20,9 @@ use std::{io, slice};
 
 pub mod constants {
     pub const GRID_HEIGHT: u16 = 200;
-    pub const GRID_WIDTH: u16 =  GRID_HEIGHT; // TODO: (GRID_HEIGHT * 4) / 3;
+    pub const GRID_WIDTH: u16 =  (GRID_HEIGHT * 4) / 3;
+
+    const _: () = assert!(GRID_WIDTH.checked_mul(GRID_HEIGHT).is_some());
 
     pub const GRID_HEIGHT_USIZE: usize = GRID_HEIGHT as usize;
     pub const GRID_WIDTH_USIZE: usize = GRID_WIDTH as usize;
