@@ -197,16 +197,17 @@ impl Model {
         bit != 0
     }
 
-    fn from_bytes(mut data: [u8; FIELD_COUNT]) -> Self {
-        for val in data.iter_mut() {
-            if FieldType::from_u8(*val).is_none() {
-                *val = FieldType::default() as u8;
+    fn from_bytes(data: &[u8]) -> Self {
+        let mut model = Self::default();
+
+        for (y, row) in model.grid.as_mut().iter_mut().enumerate() {
+            for (x, field) in row.iter_mut().enumerate() {
+                let i = y * GRID_WIDTH_USIZE + x;
+                *field = FieldType::from_u8(*data.get(i).unwrap()).unwrap_or_default()
             }
         }
-        Model {
-            grid: Box::new(unsafe { *(&data as *const [u8; FIELD_COUNT] as *const Grid) }),
-            ..Default::default()
-        }
+
+        model
     }
 
     fn to_bytes(&self) -> &[u8] {
@@ -227,7 +228,7 @@ impl Model {
     ) -> Option<Self> {
         match File::open(file_path) {
             Ok(mut file) => {
-                let mut data: [u8; FIELD_COUNT] = [0; FIELD_COUNT];
+                let mut data: Vec<u8> = vec![0u8; FIELD_COUNT];
                 match file.read(&mut data) {
                     Err(err) => {
                         eprintln!("Failed read from {file_path:?}: {err}");
@@ -241,7 +242,7 @@ impl Model {
                                 None
                             } else {
                                 eprintln!("Loaded data from {file_path:?}");
-                                Some(Model::from_bytes(data))
+                                Some(Model::from_bytes(&data))
                             }
                         } else {
                             eprintln!("{file_path:?} didn't contain {FIELD_COUNT} bytes");
