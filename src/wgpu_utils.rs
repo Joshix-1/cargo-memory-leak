@@ -1,11 +1,10 @@
 use crate::field_type::FieldType;
-use crate::model::constants::FIELD_COUNT;
-use crate::model::Grid;
+use crate::model::constants::{FIELD_COUNT, GRID_HEIGHT, GRID_WIDTH};
 use nannou::prelude::Window;
 use nannou::wgpu;
 use nannou::wgpu::{BindGroup, BindGroupLayout, Device};
 use std::mem::size_of;
-use wgpu_types::{SamplerBindingType, TextureFormat, TextureViewDimension};
+use wgpu_types::{TextureFormat, TextureViewDimension};
 
 pub(crate) struct WgpuModel {
     pub render_pipeline: wgpu::RenderPipeline,
@@ -92,24 +91,16 @@ pub(crate) struct TextureData {
 pub(crate) fn create_texture_data(device: &Device, window: &Window) -> TextureData {
     let texture_bind_group_layout =
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: wgpu::TextureViewDimension::D1,
-                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                    },
-                    count: None,
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Texture {
+                    multisampled: false,
+                    view_dimension: wgpu::TextureViewDimension::D1,
+                    sample_type: wgpu::TextureSampleType::Float { filterable: false },
                 },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(SamplerBindingType::NonFiltering),
-                    count: None,
-                },
-            ],
+                count: None,
+            }],
             label: Some("texture_bind_group_layout"),
         });
 
@@ -157,22 +148,13 @@ pub(crate) fn create_texture_data(device: &Device, window: &Window) -> TextureDa
         dimension: Some(TextureViewDimension::D1),
         ..Default::default()
     });
-    let diffuse_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-        ..Default::default()
-    });
 
     let texture_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
         layout: &texture_bind_group_layout,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: wgpu::BindingResource::TextureView(&diffuse_texture_view),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: wgpu::BindingResource::Sampler(&diffuse_sampler),
-            },
-        ],
+        entries: &[wgpu::BindGroupEntry {
+            binding: 0,
+            resource: wgpu::BindingResource::TextureView(&diffuse_texture_view),
+        }],
         label: Some("diffuse_bind_group"),
     });
 
@@ -189,8 +171,8 @@ pub(crate) struct FieldData {
 
 impl FieldData {
     const TEXTURE_SIZE: wgpu::Extent3d = wgpu::Extent3d {
-        width: size_of::<Grid>() as u32,
-        height: 1,
+        width: GRID_WIDTH as u32,
+        height: GRID_HEIGHT as u32,
         depth_or_array_layers: 1,
     };
     pub fn write_texture_to_queue(
@@ -198,6 +180,7 @@ impl FieldData {
         queue: &wgpu::Queue,
         texture_data: &[u8],
     ) {
+        assert_eq!(texture_data.len(), Self::TEXTURE_SIZE.width as usize * Self::TEXTURE_SIZE.height as usize);
         queue.write_texture(
             // Tells wgpu where to copy the pixel data
             wgpu::ImageCopyTexture {
@@ -212,7 +195,7 @@ impl FieldData {
             wgpu::ImageDataLayout {
                 offset: 0,
                 bytes_per_row: Some(Self::TEXTURE_SIZE.width),
-                rows_per_image: Some(1),
+                rows_per_image: Some(Self::TEXTURE_SIZE.height),
             },
             Self::TEXTURE_SIZE,
         )
@@ -227,7 +210,7 @@ pub(crate) fn create_field_texture_data(device: &Device) -> FieldData {
                 visibility: wgpu::ShaderStages::VERTEX,
                 ty: wgpu::BindingType::Texture {
                     multisampled: false,
-                    view_dimension: TextureViewDimension::D1,
+                    view_dimension: TextureViewDimension::D2,
                     sample_type: wgpu::TextureSampleType::Uint,
                 },
                 count: None,
@@ -239,16 +222,16 @@ pub(crate) fn create_field_texture_data(device: &Device) -> FieldData {
         size: FieldData::TEXTURE_SIZE,
         mip_level_count: 1,
         sample_count: 1,
-        dimension: wgpu::TextureDimension::D1,
+        dimension: wgpu::TextureDimension::D2,
         format: TextureFormat::R8Uint,
         usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
         label: Some("field data texture"),
         view_formats: &[],
     });
 
-    let diffuse_texture_view = texture.create_view(&wgpu::TextureViewDescriptor {
+    let texture_view = texture.create_view(&wgpu::TextureViewDescriptor {
         format: Some(TextureFormat::R8Uint),
-        dimension: Some(TextureViewDimension::D1),
+        dimension: Some(TextureViewDimension::D2),
         ..Default::default()
     });
 
@@ -256,7 +239,7 @@ pub(crate) fn create_field_texture_data(device: &Device) -> FieldData {
         layout: &texture_bind_group_layout,
         entries: &[wgpu::BindGroupEntry {
             binding: 0,
-            resource: wgpu::BindingResource::TextureView(&diffuse_texture_view),
+            resource: wgpu::BindingResource::TextureView(&texture_view),
         }],
         label: Some("grid data bind_group"),
     });

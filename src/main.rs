@@ -60,7 +60,12 @@ fn model(app: &App) -> CompleteModel {
     let window = app.window(w_id).unwrap();
     let device = window.device();
 
-    let vs_mod = device.create_shader_module(wgpu::include_wgsl!("vertex_shader.wgsl"));
+    let vs_mod = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("vertex_shader.wgsl"),
+        source: wgpu::ShaderSource::Wgsl(
+            format!("{}", format_args!(include_str!("vertex_shader.wgsl"), width=GRID_WIDTH, height=GRID_HEIGHT)).into()
+        ),
+    });
     let fs_mod = device.create_shader_module(wgpu::include_wgsl!("fragment_shader.wgsl"));
 
     let texture_data = create_texture_data(device, window.deref());
@@ -199,10 +204,6 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
 }
 
 fn view(_app: &App, model: &CompleteModel, frame: Frame) {
-    // TODO
-    // create another buffer from which the vertex shader can read the index into the colour texture
-    // ideally it could just be the data in model.model.grid
-
     let mut encoder = frame.command_encoder();
     let queue = frame.device_queue_pair().queue();
 
