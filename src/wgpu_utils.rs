@@ -36,7 +36,7 @@ impl Vertex {
 }
 
 /// 4 for every cell
-/// top-left, top-right, bottom-left, bottom-right
+/// top-left, bottom-left, top-right, bottom-right
 pub(crate) type VertexBuffer = [Vertex; FIELD_COUNT * 4];
 /// 2 triangles per cell
 pub(crate) const INDEX_BUFFER_SIZE: u32 = (FIELD_COUNT * 6) as u32;

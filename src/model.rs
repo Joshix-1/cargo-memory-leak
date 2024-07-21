@@ -343,7 +343,7 @@ impl Model {
             .unwrap();
 
         for i in 0..FIELD_COUNT as u32 {
-            const VALS: [u32; 6] = [1, 0, 2, 2, 1, 3];
+            const VALS: [u32; 6] = [2, 0, 1, 1, 2, 3];
             for (j, val) in VALS.into_iter().enumerate() {
                 buffer[(i * 6) as usize + j] = i * 4 + val;
             }
@@ -354,10 +354,10 @@ impl Model {
 
     fn write_position_to_vertices(&mut self) {
         const OFFSETS: [(u16, u16); 4] = [
-            // top-left, top-right, bottom-left, bottom-right
+            // top-left, bottom-left, top-right, bottom-right
             (0, 0),
-            (1, 0),
             (0, 1),
+            (1, 0),
             (1, 1),
         ];
 
