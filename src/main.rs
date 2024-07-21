@@ -137,9 +137,9 @@ fn handle_events(app: &App, cmodel: &mut CompleteModel, event: Event) {
         Event::Update(_) => {
             model.update();
 
-            model.write_to_vertices();
-
             handle_mouse_interaction(app, model);
+
+            model.write_to_vertices();
         }
         _ => (),
     }
