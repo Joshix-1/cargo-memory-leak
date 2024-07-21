@@ -8,8 +8,8 @@ use crate::field_type::FieldType;
 use crate::model::constants::*;
 use crate::model::Model;
 use crate::wgpu_utils::{
-    create_pipeline_layout, create_render_pipeline, create_texture_data, WgpuModel,
-    INDEX_BUFFER_SIZE,
+    create_field_texture_data, create_pipeline_layout, create_render_pipeline, create_texture_data,
+    FieldData, WgpuModel, INDEX_BUFFER_SIZE,
 };
 use nannou::event::MouseScrollDelta;
 use nannou::geom::Rect;
@@ -51,7 +51,12 @@ fn get_cell_size_and_display_rect(window: Ref<Window>) -> (f32, Rect) {
 
 #[inline]
 fn model(app: &App) -> CompleteModel {
-    let w_id = app.new_window().view(view).build().unwrap();
+    let w_id = app
+        .new_window()
+        .device_descriptor(Default::default())
+        .view(view)
+        .build()
+        .unwrap();
     let window = app.window(w_id).unwrap();
     let device = window.device();
 
@@ -60,7 +65,15 @@ fn model(app: &App) -> CompleteModel {
 
     let texture_data = create_texture_data(device, window.deref());
 
-    let pipeline_layout = create_pipeline_layout(device, &texture_data.bind_group_layout);
+    let grid_texture_data = create_field_texture_data(device);
+
+    let pipeline_layout = create_pipeline_layout(
+        device,
+        &[
+            &texture_data.bind_group_layout,
+            &grid_texture_data.bind_group.bind_group_layout,
+        ],
+    );
     let render_pipeline = create_render_pipeline(
         device,
         &pipeline_layout,
@@ -90,6 +103,8 @@ fn model(app: &App) -> CompleteModel {
         vertex_buffer,
         index_buffer,
         bind_group: texture_data.bind_group,
+        grid_bind_group: grid_texture_data.bind_group.bind_group,
+        grid_texture: grid_texture_data.texture,
     };
 
     CompleteModel {
@@ -131,15 +146,21 @@ fn handle_events(app: &App, cmodel: &mut CompleteModel, event: Event) {
                     *model = data
                 }
             }
-            Some(Resized(_)) => model.resize_window(app.main_window()),
+            Some(Resized(_)) => {
+                model.resize_window(app.main_window());
+
+                app.main_window().queue().write_buffer(
+                    &cmodel.wgpu_model.vertex_buffer,
+                    0,
+                    unsafe { wgpu::bytes::from_slice(model.vertices.as_ref()) },
+                );
+            }
             _ => (),
         },
         Event::Update(_) => {
             model.update();
 
             handle_mouse_interaction(app, model);
-
-            model.write_to_vertices();
         }
         _ => (),
     }
@@ -178,13 +199,18 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
 }
 
 fn view(_app: &App, model: &CompleteModel, frame: Frame) {
+    // TODO
+    // create another buffer from which the vertex shader can read the index into the colour texture
+    // ideally it could just be the data in model.model.grid
+
     let mut encoder = frame.command_encoder();
-    frame
-        .device_queue_pair()
-        .queue()
-        .write_buffer(&model.wgpu_model.vertex_buffer, 0, unsafe {
-            wgpu::bytes::from_slice(model.model.vertices.as_ref())
-        });
+    let queue = frame.device_queue_pair().queue();
+
+    FieldData::write_texture_to_queue(
+        &model.wgpu_model.grid_texture,
+        queue,
+        model.model.as_bytes(),
+    );
 
     const LOAD_OP: wgpu::LoadOp<wgpu::Color> = wgpu::LoadOp::Clear(wgpu::Color {
         r: 0.17,
@@ -198,6 +224,7 @@ fn view(_app: &App, model: &CompleteModel, frame: Frame) {
 
     render_pass.set_pipeline(&model.wgpu_model.render_pipeline);
     render_pass.set_bind_group(0, &model.wgpu_model.bind_group, &[]);
+    render_pass.set_bind_group(1, &model.wgpu_model.grid_bind_group, &[]);
     render_pass.set_vertex_buffer(0, model.wgpu_model.vertex_buffer.slice(..));
     render_pass.set_index_buffer(
         model.wgpu_model.index_buffer.slice(..),

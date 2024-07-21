@@ -39,11 +39,6 @@ impl FieldType {
         }
     }
 
-    #[inline]
-    pub fn get_texture_index(self) -> u8 {
-        self as u8
-    }
-
     pub const fn is_sand(self) -> bool {
         matches!(
             self,

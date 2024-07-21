@@ -19,7 +19,7 @@ use std::slice::SliceIndex;
 use std::{io, slice};
 
 pub mod constants {
-    pub const GRID_HEIGHT: u16 = 200;
+    pub const GRID_HEIGHT: u16 = 78;
     pub const GRID_WIDTH: u16 = (GRID_HEIGHT * 4) / 3;
 
     pub const GRID_HEIGHT_USIZE: usize = GRID_HEIGHT as usize;
@@ -95,7 +95,6 @@ impl Default for Model {
             vertices: vec![
                 Vertex {
                     position: [0.0, 0.0],
-                    texture_index: 0,
                 };
                 size_of::<VertexBuffer>() / size_of::<Vertex>()
             ]
@@ -213,7 +212,7 @@ impl Model {
         model
     }
 
-    fn to_bytes(&self) -> &[u8] {
+    pub fn as_bytes(&self) -> &[u8] {
         const _: () = assert!(size_of::<FieldType>() == size_of::<u8>());
         let data: &[[FieldType; GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE] = &self.grid;
         const _: () = assert!(size_of::<Grid>() == GRID_HEIGHT_USIZE * GRID_WIDTH_USIZE);
@@ -223,7 +222,7 @@ impl Model {
     }
 
     pub(crate) fn write_to_file<P: AsRef<Path> + ?Sized>(&self, file_path: &P) -> io::Result<()> {
-        File::create(file_path)?.write_all(self.to_bytes())
+        File::create(file_path)?.write_all(self.as_bytes())
     }
 
     pub(crate) fn try_read_from_save<P: AsRef<Path> + Debug + ?Sized>(
@@ -372,21 +371,6 @@ impl Model {
                         self.grid_dim.top_left_y
                             + self.grid_dim.height * f32::from(y as u16 + dy) / GRID_HEIGHT_F32,
                     ];
-                }
-            }
-        }
-    }
-
-    pub fn write_to_vertices(&mut self) {
-        for (y, row) in self.grid.iter().enumerate() {
-            for (x, field) in row.iter().enumerate() {
-                let colour = field.get_texture_index() as u32;
-
-                let first_index: usize = (row.len() * y + x) * 4;
-
-                for i in 0..4 {
-                    let vertex = self.vertices.get_mut(first_index + i).unwrap();
-                    vertex.texture_index = colour;
                 }
             }
         }

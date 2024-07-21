@@ -1,8 +1,10 @@
 use crate::field_type::FieldType;
 use crate::model::constants::FIELD_COUNT;
+use crate::model::Grid;
 use nannou::prelude::Window;
 use nannou::wgpu;
 use nannou::wgpu::{BindGroup, BindGroupLayout, Device};
+use std::mem::size_of;
 use wgpu_types::{SamplerBindingType, TextureFormat, TextureViewDimension};
 
 pub(crate) struct WgpuModel {
@@ -10,6 +12,8 @@ pub(crate) struct WgpuModel {
     pub vertex_buffer: wgpu::Buffer,
     pub index_buffer: wgpu::Buffer,
     pub bind_group: BindGroup,
+    pub grid_bind_group: BindGroup,
+    pub grid_texture: wgpu::TextureHandle,
 }
 
 // The vertex type that we will use to represent a point on our triangle.
@@ -17,17 +21,15 @@ pub(crate) struct WgpuModel {
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Vertex {
     pub(crate) position: [f32; 2],
-    pub(crate) texture_index: u32,
 }
 
 impl Vertex {
     fn desc() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<Self>() as wgpu::BufferAddress,
+            array_stride: size_of::<Self>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: {
-                const ATTRS: [wgpu::VertexAttribute; 2] =
-                    wgpu::vertex_attr_array![0 => Float32x2, 1 => Uint32];
+                const ATTRS: [wgpu::VertexAttribute; 1] = wgpu::vertex_attr_array![0 => Float32x2];
                 &ATTRS
             },
         }
@@ -43,11 +45,11 @@ pub(crate) type IndexBuffer = [u32; INDEX_BUFFER_SIZE as usize];
 
 pub(crate) fn create_pipeline_layout(
     device: &Device,
-    bind_group_layout: &BindGroupLayout,
+    bind_group_layouts: &[&BindGroupLayout],
 ) -> wgpu::PipelineLayout {
     let desc = wgpu::PipelineLayoutDescriptor {
         label: None,
-        bind_group_layouts: &[bind_group_layout],
+        bind_group_layouts,
         push_constant_ranges: &[],
     };
     device.create_pipeline_layout(&desc)
@@ -177,5 +179,93 @@ pub(crate) fn create_texture_data(device: &Device, window: &Window) -> TextureDa
     TextureData {
         bind_group: texture_bind_group,
         bind_group_layout: texture_bind_group_layout,
+    }
+}
+
+pub(crate) struct FieldData {
+    pub bind_group: TextureData,
+    pub texture: wgpu::TextureHandle,
+}
+
+impl FieldData {
+    const TEXTURE_SIZE: wgpu::Extent3d = wgpu::Extent3d {
+        width: size_of::<Grid>() as u32,
+        height: 1,
+        depth_or_array_layers: 1,
+    };
+    pub fn write_texture_to_queue(
+        texture: &wgpu::TextureHandle,
+        queue: &wgpu::Queue,
+        texture_data: &[u8],
+    ) {
+        queue.write_texture(
+            // Tells wgpu where to copy the pixel data
+            wgpu::ImageCopyTexture {
+                texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            // The actual pixel data
+            texture_data,
+            // The layout of the texture
+            wgpu::ImageDataLayout {
+                offset: 0,
+                bytes_per_row: Some(Self::TEXTURE_SIZE.width),
+                rows_per_image: Some(1),
+            },
+            Self::TEXTURE_SIZE,
+        )
+    }
+}
+
+pub(crate) fn create_field_texture_data(device: &Device) -> FieldData {
+    let texture_bind_group_layout =
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX,
+                ty: wgpu::BindingType::Texture {
+                    multisampled: false,
+                    view_dimension: TextureViewDimension::D1,
+                    sample_type: wgpu::TextureSampleType::Uint,
+                },
+                count: None,
+            }],
+            label: Some("field colour data binding layout"),
+        });
+
+    let texture = device.create_texture(&wgpu::TextureDescriptor {
+        size: FieldData::TEXTURE_SIZE,
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D1,
+        format: TextureFormat::R8Uint,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+        label: Some("field data texture"),
+        view_formats: &[],
+    });
+
+    let diffuse_texture_view = texture.create_view(&wgpu::TextureViewDescriptor {
+        format: Some(TextureFormat::R8Uint),
+        dimension: Some(TextureViewDimension::D1),
+        ..Default::default()
+    });
+
+    let texture_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        layout: &texture_bind_group_layout,
+        entries: &[wgpu::BindGroupEntry {
+            binding: 0,
+            resource: wgpu::BindingResource::TextureView(&diffuse_texture_view),
+        }],
+        label: Some("grid data bind_group"),
+    });
+
+    FieldData {
+        bind_group: TextureData {
+            bind_group: texture_bind_group,
+            bind_group_layout: texture_bind_group_layout,
+        },
+        texture,
     }
 }
