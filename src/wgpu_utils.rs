@@ -42,7 +42,7 @@ pub(crate) const INDEX_BUFFER_SIZE: u32 = (FIELD_COUNT * 6) as u32;
 pub(crate) type IndexBuffer = [u32; INDEX_BUFFER_SIZE as usize];
 
 pub(crate) fn create_pipeline_layout(
-    device: &wgpu::Device,
+    device: &Device,
     bind_group_layout: &BindGroupLayout,
 ) -> wgpu::PipelineLayout {
     let desc = wgpu::PipelineLayoutDescriptor {
@@ -55,11 +55,11 @@ pub(crate) fn create_pipeline_layout(
 
 // Function taken from: https://github.com/nannou-org/nannou/blob/3713d270c0fa74ad5b5a7bccadb32fa68296b4de/examples/wgpu/wgpu_image/wgpu_image.rs
 pub(crate) fn create_render_pipeline(
-    device: &wgpu::Device,
+    device: &Device,
     layout: &wgpu::PipelineLayout,
     vs_mod: &wgpu::ShaderModule,
     fs_mod: &wgpu::ShaderModule,
-    dst_format: wgpu::TextureFormat,
+    dst_format: TextureFormat,
     sample_count: u32,
 ) -> wgpu::RenderPipeline {
     wgpu::RenderPipelineBuilder::from_layout(layout, vs_mod)
@@ -67,10 +67,10 @@ pub(crate) fn create_render_pipeline(
         .color_format(dst_format)
         .sample_count(sample_count)
         .primitive(wgpu::PrimitiveState {
-            topology: wgpu::PrimitiveTopology::TriangleList, // 1.
+            topology: wgpu::PrimitiveTopology::TriangleList,
             strip_index_format: None,
-            front_face: wgpu::FrontFace::Ccw, // 2.
-            cull_mode: Some(wgpu::Face::Back),
+            front_face: wgpu::FrontFace::Ccw,
+            cull_mode: None, // https://gpuweb.github.io/gpuweb/#enumdef-gpucullmode
             // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
             polygon_mode: wgpu::PolygonMode::Fill,
             // Requires Features::DEPTH_CLIP_CONTROL
@@ -79,7 +79,6 @@ pub(crate) fn create_render_pipeline(
             conservative: false,
         })
         .add_vertex_buffer_layout(Vertex::desc())
-        .primitive_topology(wgpu::PrimitiveTopology::TriangleStrip)
         .build(device)
 }
 
@@ -125,7 +124,7 @@ pub(crate) fn create_texture_data(device: &Device, window: &Window) -> TextureDa
         mip_level_count: 1,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D1,
-        format: wgpu::TextureFormat::Rgba8UnormSrgb,
+        format: TextureFormat::Rgba8UnormSrgb,
         usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
         label: Some("diffuse_texture"),
         view_formats: &[],

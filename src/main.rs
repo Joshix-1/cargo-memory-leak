@@ -54,8 +54,6 @@ fn model(app: &App) -> CompleteModel {
     let w_id = app.new_window().view(view).build().unwrap();
     let window = app.window(w_id).unwrap();
     let device = window.device();
-    let format = Frame::TEXTURE_FORMAT;
-    let msaa_samples = window.msaa_samples();
 
     let vs_mod = device.create_shader_module(wgpu::include_wgsl!("vertex_shader.wgsl"));
     let fs_mod = device.create_shader_module(wgpu::include_wgsl!("fragment_shader.wgsl"));
@@ -68,8 +66,8 @@ fn model(app: &App) -> CompleteModel {
         &pipeline_layout,
         &vs_mod,
         &fs_mod,
-        format,
-        msaa_samples,
+        Frame::TEXTURE_FORMAT,
+        window.msaa_samples(),
     );
 
     let sandrs_model = Model::try_read_from_save(SAVE_FILE).unwrap_or_default();
