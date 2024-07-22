@@ -6,21 +6,22 @@ mod wgpu_utils;
 use crate::field_type::FieldType;
 
 use crate::model::constants::*;
-use crate::model::Model;
+use crate::model::{GridDisplayData, Model};
 use crate::wgpu_utils::{
-    create_field_texture_data, create_pipeline_layout, create_render_pipeline, create_texture_data,
-    FieldData, WgpuModel, INDEX_BUFFER_SIZE,
+    create_field_texture_data, create_render_pipeline, create_texture_data, FieldData, WgpuModel,
+    VERTEX_COUNT,
 };
 use nannou::event::MouseScrollDelta;
 use nannou::geom::Rect;
-use nannou::prelude::{DeviceExt, DroppedFile, KeyReleased, MouseWheel, Resized, ToPrimitive};
-use nannou::wgpu::BufferInitDescriptor;
+use nannou::prelude::{DroppedFile, KeyReleased, MouseWheel, Resized, ToPrimitive};
 use nannou::window::Window;
 use nannou::winit::dpi::PhysicalPosition;
 use nannou::winit::event::VirtualKeyCode;
 use nannou::{wgpu, App, Event, Frame};
 use std::cell::Ref;
+use std::mem::size_of;
 use std::ops::Deref;
+use wgpu_types::{PushConstantRange, ShaderStages};
 
 struct CompleteModel {
     model: Model,
@@ -53,7 +54,14 @@ fn get_cell_size_and_display_rect(window: Ref<Window>) -> (f32, Rect) {
 fn model(app: &App) -> CompleteModel {
     let w_id = app
         .new_window()
-        .device_descriptor(Default::default())
+        .device_descriptor(wgpu::DeviceDescriptor {
+            features: wgpu::Features::PUSH_CONSTANTS,
+            limits: wgpu::Limits {
+                max_push_constant_size: size_of::<GridDisplayData>() as u32,
+                ..Default::default()
+            },
+            ..Default::default()
+        })
         .view(view)
         .build()
         .unwrap();
@@ -63,7 +71,11 @@ fn model(app: &App) -> CompleteModel {
     let vs_mod = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("vertex_shader.wgsl"),
         source: wgpu::ShaderSource::Wgsl(
-            format!("{}", format_args!(include_str!("vertex_shader.wgsl"), width=GRID_WIDTH)).into()
+            format!(
+                "{}",
+                format_args!(include_str!("vertex_shader.wgsl"), width = GRID_WIDTH)
+            )
+            .into(),
         ),
     });
     let fs_mod = device.create_shader_module(wgpu::include_wgsl!("fragment_shader.wgsl"));
@@ -72,13 +84,23 @@ fn model(app: &App) -> CompleteModel {
 
     let grid_texture_data = create_field_texture_data(device);
 
-    let pipeline_layout = create_pipeline_layout(
-        device,
-        &[
+    let pipeline_layout = {
+        let bind_group_layouts = &[
             &texture_data.bind_group_layout,
             &grid_texture_data.bind_group.bind_group_layout,
-        ],
-    );
+        ];
+        let push_constant_ranges = &[PushConstantRange {
+            range: 0..(size_of::<GridDisplayData>() as u32),
+            stages: ShaderStages::VERTEX,
+        }];
+        let desc = wgpu::PipelineLayoutDescriptor {
+            label: None,
+            bind_group_layouts,
+            push_constant_ranges,
+        };
+        device.create_pipeline_layout(&desc)
+    };
+
     let render_pipeline = create_render_pipeline(
         device,
         &pipeline_layout,
@@ -90,23 +112,8 @@ fn model(app: &App) -> CompleteModel {
 
     let sandrs_model = Model::try_read_from_save(SAVE_FILE).unwrap_or_default();
 
-    let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: None,
-        contents: unsafe { wgpu::bytes::from_slice(sandrs_model.vertices.as_ref()) },
-        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-    });
-
-    let index_buffer_data = Model::create_index_buffer();
-    let index_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Index Buffer"),
-        contents: unsafe { wgpu::bytes::from_slice(index_buffer_data.as_slice()) },
-        usage: wgpu::BufferUsages::INDEX,
-    });
-
     let wgpu_model = WgpuModel {
         render_pipeline,
-        vertex_buffer,
-        index_buffer,
         bind_group: texture_data.bind_group,
         grid_bind_group: grid_texture_data.bind_group.bind_group,
         grid_texture: grid_texture_data.texture,
@@ -153,12 +160,6 @@ fn handle_events(app: &App, cmodel: &mut CompleteModel, event: Event) {
             }
             Some(Resized(_)) => {
                 model.resize_window(app.main_window());
-
-                app.main_window().queue().write_buffer(
-                    &cmodel.wgpu_model.vertex_buffer,
-                    0,
-                    unsafe { wgpu::bytes::from_slice(model.vertices.as_ref()) },
-                );
             }
             _ => (),
         },
@@ -226,10 +227,10 @@ fn view(_app: &App, model: &CompleteModel, frame: Frame) {
     render_pass.set_pipeline(&model.wgpu_model.render_pipeline);
     render_pass.set_bind_group(0, &model.wgpu_model.bind_group, &[]);
     render_pass.set_bind_group(1, &model.wgpu_model.grid_bind_group, &[]);
-    render_pass.set_vertex_buffer(0, model.wgpu_model.vertex_buffer.slice(..));
-    render_pass.set_index_buffer(
-        model.wgpu_model.index_buffer.slice(..),
-        wgpu::IndexFormat::Uint32,
+    render_pass.set_push_constants(
+        ShaderStages::VERTEX,
+        0,
+        model.model.get_grid_dimension_data_for_shader(),
     );
-    render_pass.draw_indexed(0..INDEX_BUFFER_SIZE, 0, 0..1);
+    render_pass.draw(0..VERTEX_COUNT, 0..1);
 }

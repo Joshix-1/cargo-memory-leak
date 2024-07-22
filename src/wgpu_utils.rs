@@ -3,56 +3,17 @@ use crate::model::constants::{FIELD_COUNT, GRID_HEIGHT, GRID_WIDTH};
 use nannou::prelude::Window;
 use nannou::wgpu;
 use nannou::wgpu::{BindGroup, BindGroupLayout, Device};
-use std::mem::size_of;
 use wgpu_types::{TextureFormat, TextureViewDimension};
 
 pub(crate) struct WgpuModel {
     pub render_pipeline: wgpu::RenderPipeline,
-    pub vertex_buffer: wgpu::Buffer,
-    pub index_buffer: wgpu::Buffer,
     pub bind_group: BindGroup,
     pub grid_bind_group: BindGroup,
     pub grid_texture: wgpu::TextureHandle,
 }
 
-// The vertex type that we will use to represent a point on our triangle.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub(crate) struct Vertex {
-    pub(crate) position: [f32; 2],
-}
-
-impl Vertex {
-    fn desc() -> wgpu::VertexBufferLayout<'static> {
-        wgpu::VertexBufferLayout {
-            array_stride: size_of::<Self>() as wgpu::BufferAddress,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: {
-                const ATTRS: [wgpu::VertexAttribute; 1] = wgpu::vertex_attr_array![0 => Float32x2];
-                &ATTRS
-            },
-        }
-    }
-}
-
-/// 4 for every cell
-/// top-left, bottom-left, top-right, bottom-right
-pub(crate) type VertexBuffer = [Vertex; FIELD_COUNT * 4];
 /// 2 triangles per cell
-pub(crate) const INDEX_BUFFER_SIZE: u32 = (FIELD_COUNT * 6) as u32;
-pub(crate) type IndexBuffer = [u32; INDEX_BUFFER_SIZE as usize];
-
-pub(crate) fn create_pipeline_layout(
-    device: &Device,
-    bind_group_layouts: &[&BindGroupLayout],
-) -> wgpu::PipelineLayout {
-    let desc = wgpu::PipelineLayoutDescriptor {
-        label: None,
-        bind_group_layouts,
-        push_constant_ranges: &[],
-    };
-    device.create_pipeline_layout(&desc)
-}
+pub(crate) const VERTEX_COUNT: u32 = (FIELD_COUNT * 6) as u32;
 
 // Function taken from: https://github.com/nannou-org/nannou/blob/3713d270c0fa74ad5b5a7bccadb32fa68296b4de/examples/wgpu/wgpu_image/wgpu_image.rs
 pub(crate) fn create_render_pipeline(
@@ -79,7 +40,6 @@ pub(crate) fn create_render_pipeline(
             // Requires Features::CONSERVATIVE_RASTERIZATION
             conservative: false,
         })
-        .add_vertex_buffer_layout(Vertex::desc())
         .build(device)
 }
 
@@ -96,7 +56,7 @@ pub(crate) fn create_texture_data(device: &Device, window: &Window) -> TextureDa
                 visibility: wgpu::ShaderStages::FRAGMENT,
                 ty: wgpu::BindingType::Texture {
                     multisampled: false,
-                    view_dimension: wgpu::TextureViewDimension::D1,
+                    view_dimension: TextureViewDimension::D1,
                     sample_type: wgpu::TextureSampleType::Float { filterable: false },
                 },
                 count: None,
@@ -180,7 +140,10 @@ impl FieldData {
         queue: &wgpu::Queue,
         texture_data: &[u8],
     ) {
-        assert_eq!(texture_data.len(), Self::TEXTURE_SIZE.width as usize * Self::TEXTURE_SIZE.height as usize);
+        assert_eq!(
+            texture_data.len(),
+            Self::TEXTURE_SIZE.width as usize * Self::TEXTURE_SIZE.height as usize
+        );
         queue.write_texture(
             // Tells wgpu where to copy the pixel data
             wgpu::ImageCopyTexture {

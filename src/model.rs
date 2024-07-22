@@ -5,7 +5,7 @@ use crate::model::constants::{
     GRID_WIDTH_USIZE,
 };
 use crate::spiral_iter::SpiralIter;
-use crate::wgpu_utils::{IndexBuffer, Vertex, VertexBuffer, INDEX_BUFFER_SIZE};
+use nannou::wgpu;
 use nannou::window::Window;
 use num_traits::FromPrimitive;
 use std::cell::Ref;
@@ -20,10 +20,12 @@ use std::{io, slice};
 
 pub mod constants {
     pub const GRID_HEIGHT: u16 = 200;
-    pub const GRID_WIDTH: u16 =  (GRID_HEIGHT * 4) / 3;
+    pub const GRID_WIDTH: u16 = (GRID_HEIGHT * 4) / 3;
 
     const _: () = assert!(GRID_WIDTH > GRID_HEIGHT);
-    const _: () = assert!((GRID_WIDTH as u32).checked_mul(GRID_HEIGHT as u32).is_some());
+    const _: () = assert!((GRID_WIDTH as u32)
+        .checked_mul(GRID_HEIGHT as u32)
+        .is_some());
 
     pub const GRID_HEIGHT_USIZE: usize = GRID_HEIGHT as usize;
     pub const GRID_WIDTH_USIZE: usize = GRID_WIDTH as usize;
@@ -36,36 +38,40 @@ pub mod constants {
 pub type Row = [FieldType; GRID_WIDTH_USIZE];
 pub type Grid = [Row; GRID_HEIGHT_USIZE];
 
-struct GridDisplayDimensions {
-    top_left_x: f32,
-    top_left_y: f32,
-    width: f32,
-    height: f32,
+#[repr(C)]
+pub struct GridDisplayData {
+    top_left_corner: [f32; 2],
+    cell_width: f32,
+    cell_height: f32,
 }
+const _: () = assert!(size_of::<GridDisplayData>() as u32 % wgpu::PUSH_CONSTANT_ALIGNMENT == 0);
+const _: () = assert!(size_of::<GridDisplayData>() % 4 == 0);
 
-impl Default for GridDisplayDimensions {
+impl Default for GridDisplayData {
     fn default() -> Self {
         Self {
-            top_left_y: 0.0,
-            top_left_x: 0.0,
-            height: Self::W,
-            width: Self::W,
+            top_left_corner: [0.0; 2],
+            cell_width: Self::W / GRID_WIDTH_F32,
+            cell_height: Self::H / GRID_HEIGHT_F32,
         }
     }
 }
 
-impl GridDisplayDimensions {
+impl GridDisplayData {
     const W: f32 = 2.0;
+    const H: f32 = 2.0;
     fn new(window: Ref<Window>) -> Self {
         let window_rect = window.rect();
         let (px_width, px_height) = window.inner_size_points();
         let (_, rect) = get_cell_size_and_display_rect(window);
 
         Self {
-            top_left_x: Self::W * (rect.x.start - window_rect.x.start) / px_width,
-            top_left_y: Self::W * (rect.y.start - window_rect.y.start) / px_height,
-            width: Self::W * rect.x.len() / px_width,
-            height: Self::W * rect.y.len() / px_height,
+            top_left_corner: [
+                Self::W * (rect.x.start - window_rect.x.start) / px_width,
+                Self::H * (rect.y.start - window_rect.y.start) / px_height,
+            ],
+            cell_width: Self::W * rect.x.len() / px_width / GRID_WIDTH_F32,
+            cell_height: Self::H * rect.y.len() / px_height / GRID_HEIGHT_F32,
         }
     }
 }
@@ -73,9 +79,8 @@ impl GridDisplayDimensions {
 pub struct Model {
     grid: Box<Grid>,
     state: u32,
-    grid_dim: GridDisplayDimensions,
-    pub vertices: Box<VertexBuffer>,
     pointer_size: NonZeroU32,
+    grid_data: GridDisplayData,
 }
 
 impl Default for Model {
@@ -94,17 +99,8 @@ impl Default for Model {
         Model {
             grid,
             state: 0xACE1,
-            grid_dim: Default::default(),
-            vertices: vec![
-                Vertex {
-                    position: [0.0, 0.0],
-                };
-                size_of::<VertexBuffer>() / size_of::<Vertex>()
-            ]
-            .into_boxed_slice()
-            .try_into()
-            .unwrap(),
             pointer_size: NonZeroU32::new(1).unwrap(),
+            grid_data: Default::default(),
         }
     }
 }
@@ -123,6 +119,15 @@ impl Model {
                     *cell = FieldType::Air;
                 }
             }
+        }
+    }
+
+    pub fn get_grid_dimension_data_for_shader(&self) -> &[u8] {
+        unsafe {
+            slice::from_raw_parts(
+                &self.grid_data as *const GridDisplayData as *const u8,
+                size_of::<GridDisplayData>(),
+            )
         }
     }
 
@@ -332,54 +337,6 @@ impl Model {
     }
 
     pub(crate) fn resize_window(&mut self, window: Ref<Window>) {
-        self.grid_dim = GridDisplayDimensions::new(window);
-
-        self.write_position_to_vertices();
-    }
-
-    pub fn create_index_buffer() -> Box<IndexBuffer> {
-        let mut buffer: Box<IndexBuffer> = vec![0u32; INDEX_BUFFER_SIZE as usize]
-            .into_boxed_slice()
-            .try_into()
-            .unwrap();
-
-        for i in 0..FIELD_COUNT as u32 {
-            const VALS: [u32; 6] = [2, 0, 1, 1, 2, 3];
-            for (j, val) in VALS.into_iter().enumerate() {
-                buffer[(i * 6) as usize + j] = i * 4 + val;
-            }
-        }
-
-        buffer
-    }
-
-    fn write_position_to_vertices(&mut self) {
-        const OFFSETS: [(u16, u16); 4] = [
-            // top-left, bottom-left, top-right, bottom-right
-            (0, 0),
-            (0, 1),
-            (1, 0),
-            (1, 1),
-        ];
-
-
-        let mut x: u16 = 0;
-        let mut y: u16 = 0;
-        for i in 0..FIELD_COUNT {
-            for (j, (dx, dy)) in OFFSETS.into_iter().enumerate() {
-                let vertex = self.vertices.get_mut(i * OFFSETS.len() + j).unwrap();
-                vertex.position = [
-                    self.grid_dim.top_left_x
-                        + self.grid_dim.width * f32::from(x + dx) / GRID_WIDTH_F32,
-                    self.grid_dim.top_left_y
-                        + self.grid_dim.height * f32::from(y + dy) / GRID_HEIGHT_F32,
-                ];
-            }
-            x += 1;
-            x %= GRID_WIDTH;
-            if x == 0 {
-                y += 1;
-            }
-        }
+        self.grid_data = GridDisplayData::new(window);
     }
 }
