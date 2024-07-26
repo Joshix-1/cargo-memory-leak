@@ -223,10 +223,10 @@ impl Model {
     pub fn as_bytes(&self) -> &[u8] {
         const _: () = assert!(size_of::<FieldType>() == size_of::<u8>());
         let data: &[[FieldType; GRID_WIDTH_USIZE]; GRID_HEIGHT_USIZE] = &self.grid;
-        const _: () = assert!(size_of::<Grid>() == GRID_HEIGHT_USIZE * GRID_WIDTH_USIZE);
-        const _: () = assert!(size_of::<Grid>() < isize::MAX as usize);
-        let data = data as *const Grid as *const u8;
-        unsafe { slice::from_raw_parts(data, size_of::<Grid>()) }
+        let data: &[FieldType] = data.as_flattened();
+        assert!(data.len() < isize::MAX as usize);
+        let ptr = data as *const [FieldType] as *const u8;
+        unsafe { slice::from_raw_parts(ptr, data.len()) }
     }
 
     pub(crate) fn write_to_file<P: AsRef<Path> + ?Sized>(&self, file_path: &P) -> io::Result<()> {
