@@ -17,9 +17,10 @@ use std::num::NonZeroU32;
 use std::path::Path;
 use std::slice::SliceIndex;
 use std::{io, slice};
+use nannou::noise::NoiseFn;
 
 pub mod constants {
-    pub const GRID_HEIGHT: u16 = 200;
+    pub const GRID_HEIGHT: u16 = 1500;
     pub const GRID_WIDTH: u16 = (GRID_HEIGHT * 4) / 3;
 
     const _: () = assert!(GRID_WIDTH > GRID_HEIGHT);
@@ -76,11 +77,63 @@ impl GridDisplayData {
     }
 }
 
+trait GridGetValue<Out: std::marker::Copy> {
+    fn get<Y: Into<usize>, X: SliceIndex<[Out]>>(
+        &self,
+        x: X,
+        y: Y,
+    ) -> Option<&X::Output>;
+
+
+    #[inline]
+    fn get_opt(&mut self, x: Option<usize>, y: Option<usize>) -> Option<Out> {
+        self.get(y?, x?).copied()
+    }
+
+    fn get_mut<T: Into<usize>>(&mut self, x: T, y: T) -> Option<&mut Out>;
+
+    #[inline]
+    fn get_mut_opt(&mut self, x: Option<usize>, y: Option<usize>) -> Option<&mut Out> {
+        self.get_mut(y?, x?)
+    }
+}
+
+impl GridGetValue<FieldType> for Box<Grid> {
+    #[inline]
+    fn get<Y: Into<usize>, X: SliceIndex<[FieldType]>>(&self, x: X, y: Y) -> Option<&X::Output> {
+        let grid: &Grid = self.as_ref();
+
+        let row: &[FieldType] = grid.get(y.into())?;
+
+        row.get(x)
+    }
+    #[inline]
+    fn get_mut<T: Into<usize>>(&mut self, x: T, y: T) -> Option<&mut FieldType> {
+        let grid: &mut Grid = self.as_mut();
+
+        let row: &mut [FieldType] = grid.get_mut(y.into())?;
+
+        row.get_mut(x.into())
+    }
+}
+
 pub struct Model {
     grid: Box<Grid>,
+    old_grid_buffer: Box<Grid>,
     state: u32,
     pointer_size: NonZeroU32,
     grid_data: GridDisplayData,
+}
+
+impl GridGetValue<FieldType> for Model {
+    #[inline]
+    fn get<Y: Into<usize>, X: SliceIndex<[FieldType]>>(&self, x: X, y: Y) -> Option<&X::Output> {
+        self.grid.get(x, y)
+    }
+    #[inline]
+    fn get_mut<T: Into<usize>>(&mut self, x: T, y: T) -> Option<&mut FieldType> {
+        self.grid.get_mut(x, y)
+    }
 }
 
 impl Default for Model {
@@ -97,10 +150,11 @@ impl Default for Model {
         *grid.first_mut().unwrap() = [FieldType::Wood; GRID_WIDTH_USIZE];
         *grid.last_mut().unwrap() = [FieldType::Wood; GRID_WIDTH_USIZE];
         Model {
-            grid,
+            grid: grid.clone(),
             state: 0xACE1,
             pointer_size: NonZeroU32::new(1).unwrap(),
             grid_data: Default::default(),
+            old_grid_buffer: grid,
         }
     }
 }
@@ -129,27 +183,6 @@ impl Model {
                 size_of::<GridDisplayData>(),
             )
         }
-    }
-
-    #[inline]
-    pub fn get<Y: Into<usize>, X: SliceIndex<[FieldType]>>(
-        &self,
-        x: X,
-        y: Y,
-    ) -> Option<&X::Output> {
-        self.grid.get(y.into()).and_then(|row| row.get(x))
-    }
-
-    #[inline]
-    pub fn get_mut<T: Into<usize>>(&mut self, x: T, y: T) -> Option<&mut FieldType> {
-        self.grid
-            .get_mut(y.into())
-            .and_then(|row| row.get_mut(x.into()))
-    }
-
-    #[inline]
-    pub fn get_mut_opt(&mut self, x: Option<usize>, y: Option<usize>) -> Option<&mut FieldType> {
-        self.grid.get_mut(y?).and_then(|row| row.get_mut(x?))
     }
 
     #[inline]
@@ -270,7 +303,8 @@ impl Model {
 
     #[inline]
     pub fn update(&mut self) {
-        for y in (0..GRID_HEIGHT_USIZE).rev() {
+        *self.old_grid_buffer.as_mut() = *self.grid.as_ref();
+        for y in 0..GRID_HEIGHT_USIZE {
             let y_below = y + 1;
             let revert = self.get_random_bit();
             for x in 0..GRID_WIDTH_USIZE {
@@ -282,22 +316,21 @@ impl Model {
                     FieldType::SandSource => {
                         if let Some(below) = self.get(x, y_below) {
                             if *below == FieldType::Air {
-                                *self.get_mut(x, y_below).unwrap() =
+                                *self.old_grid_buffer.get_mut(x, y_below).unwrap() =
                                     FieldType::sand_from_random_source(|| self.get_random_bit());
                             }
                         }
                     }
                     field_type if field_type.is_sand() => {
                         // sand can fall down
-                        let mut default = FieldType::BlackHole;
                         let res = {
-                            let below: &mut FieldType =
-                                self.get_mut(x, y_below).unwrap_or(&mut default);
-                            if *below == FieldType::Air {
-                                *below = field_type;
+                            let below: FieldType =
+                                self.get(x, y_below).copied().unwrap_or(FieldType::BlackHole);
+                            if below == FieldType::Air {
+                                *self.old_grid_buffer.get_mut(x, y_below).unwrap() = field_type;
                                 true
                             } else {
-                                *below == FieldType::BlackHole
+                                below == FieldType::BlackHole
                             }
                         };
                         if res {
@@ -317,12 +350,12 @@ impl Model {
                                     }
                                     if let Some(below) = self.get_mut(curr_x, y_below) {
                                         if *below == FieldType::Air {
-                                            *self.get_mut(curr_x, y).unwrap() = field_type;
-                                            *self.get_mut(x, y).unwrap() = FieldType::Air;
+                                            *self.old_grid_buffer.get_mut(curr_x, y).unwrap() = field_type;
+                                            *self.old_grid_buffer.get_mut(x, y).unwrap() = FieldType::Air;
                                             break;
                                         }
                                         if *below == FieldType::BlackHole {
-                                            *self.get_mut(x, y).unwrap() = FieldType::Air;
+                                            *self.old_grid_buffer.get_mut(x, y).unwrap() = FieldType::Air;
                                             break;
                                         }
                                     }
@@ -334,6 +367,7 @@ impl Model {
                 };
             }
         }
+        *self.grid.as_mut() = *self.old_grid_buffer;
     }
 
     pub(crate) fn resize_window(&mut self, window: Ref<Window>) {
