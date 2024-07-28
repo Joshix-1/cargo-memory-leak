@@ -17,9 +17,10 @@ use std::num::NonZeroU32;
 use std::path::Path;
 use std::slice::SliceIndex;
 use std::{io, slice};
+use nannou::noise::NoiseFn;
 
 pub mod constants {
-    pub const GRID_HEIGHT: u16 = 150;
+    pub const GRID_HEIGHT: u16 = 1500;
     pub const GRID_WIDTH: u16 = (GRID_HEIGHT * 4) / 3;
 
     const _: () = assert!(GRID_WIDTH > GRID_HEIGHT);
@@ -83,11 +84,17 @@ trait GridGetValue<Out: std::marker::Copy> {
         y: Y,
     ) -> Option<&X::Output>;
 
+
+    #[inline]
+    fn get_opt(&mut self, x: Option<usize>, y: Option<usize>) -> Option<Out> {
+        self.get(y?, x?).copied()
+    }
+
     fn get_mut<T: Into<usize>>(&mut self, x: T, y: T) -> Option<&mut Out>;
 
     #[inline]
     fn get_mut_opt(&mut self, x: Option<usize>, y: Option<usize>) -> Option<&mut Out> {
-        self.get_mut(x?, y?)
+        self.get_mut(y?, x?)
     }
 }
 
@@ -296,8 +303,6 @@ impl Model {
 
     #[inline]
     pub fn update(&mut self) {
-        let mut sand_count = self.grid.as_flattened().iter().filter(|x| x.is_sand()).count();
-
         *self.old_grid_buffer.as_mut() = *self.grid.as_ref();
         for y in 0..GRID_HEIGHT_USIZE {
             let y_below = y + 1;
@@ -313,7 +318,6 @@ impl Model {
                             if *below == FieldType::Air {
                                 *self.old_grid_buffer.get_mut(x, y_below).unwrap() =
                                     FieldType::sand_from_random_source(|| self.get_random_bit());
-                                sand_count += 1;
                             }
                         }
                     }
@@ -325,15 +329,12 @@ impl Model {
                             if below == FieldType::Air {
                                 *self.old_grid_buffer.get_mut(x, y_below).unwrap() = field_type;
                                 true
-                            } else if below == FieldType::BlackHole {
-                                sand_count -= 1;
-                                true
                             } else {
-                                false
+                                below == FieldType::BlackHole
                             }
                         };
                         if res {
-                            *self.old_grid_buffer.get_mut(x, y).unwrap() = FieldType::Air;
+                            *self.get_mut(x, y).unwrap() = FieldType::Air;
                         } else {
                             for dx in if self.get_random_bit() {
                                 [1, -1]
@@ -347,14 +348,13 @@ impl Model {
                                     {
                                         continue;
                                     }
-                                    if let Some(below) = self.get(curr_x, y_below) {
+                                    if let Some(below) = self.get_mut(curr_x, y_below) {
                                         if *below == FieldType::Air {
                                             *self.old_grid_buffer.get_mut(curr_x, y).unwrap() = field_type;
                                             *self.old_grid_buffer.get_mut(x, y).unwrap() = FieldType::Air;
                                             break;
                                         }
                                         if *below == FieldType::BlackHole {
-                                            sand_count -= 1;
                                             *self.old_grid_buffer.get_mut(x, y).unwrap() = FieldType::Air;
                                             break;
                                         }
@@ -367,9 +367,6 @@ impl Model {
                 };
             }
         }
-
-        debug_assert_eq!(sand_count, self.old_grid_buffer.as_flattened().iter().filter(|x| x.is_sand()).count());
-
         *self.grid.as_mut() = *self.old_grid_buffer;
     }
 
