@@ -21,6 +21,7 @@ pub enum FieldType {
 }
 
 const _: () = assert!(size_of::<FieldType>() == 1);
+const _: () = assert!(size_of::<Option<FieldType>>() == 1);
 
 impl FieldType {
     const MAX: u8 = FieldType::SandC7 as u8 + 1;
