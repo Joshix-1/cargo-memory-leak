@@ -363,25 +363,27 @@ impl Model {
                                 [-1, 1]
                             } {
                                 if let Some(curr_x) = x.checked_add_signed(dx) {
-                                    if curr_x != x
-                                        && self.get(curr_x, y).or(Some(&FieldType::Air))
-                                            != Some(&FieldType::Air)
-                                    {
-                                        continue;
+                                    if self.get(curr_x, y) != Some(&FieldType::Air) {
+                                        continue; // neighbor is not air
                                     }
-                                    if *updated.get(y * GRID_WIDTH_USIZE + curr_x).unwrap() {
-                                        continue;
+                                    if *updated
+                                        .get_mut(y_below * GRID_WIDTH_USIZE + curr_x)
+                                        .unwrap()
+                                    {
+                                        continue; // was already updated
                                     }
                                     if let Some(below) = self.get(curr_x, y_below) {
                                         if *below == FieldType::Air {
-                                            *self.old_grid_buffer.get_mut(curr_x, y).unwrap() =
-                                                field_type;
+                                            *self
+                                                .old_grid_buffer
+                                                .get_mut(curr_x, y_below)
+                                                .unwrap() = field_type;
+                                            *updated
+                                                .get_mut(y_below * GRID_WIDTH_USIZE + curr_x)
+                                                .unwrap() = true;
                                             *self.old_grid_buffer.get_mut(x, y).unwrap() =
                                                 FieldType::Air;
                                             *updated.get_mut(bit_field_index).unwrap() = true;
-                                            *updated
-                                                .get_mut(y * GRID_WIDTH_USIZE + curr_x)
-                                                .unwrap() = true;
                                             break;
                                         }
                                         if *below == FieldType::BlackHole {
