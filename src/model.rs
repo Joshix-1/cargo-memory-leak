@@ -343,6 +343,7 @@ impl Model {
                                 .unwrap_or(FieldType::BlackHole);
                             if below == FieldType::Air && !below_updated {
                                 *self.old_grid_buffer.get_mut(x, y_below).unwrap() = field_type;
+                                *updated.get_mut(y_below * GRID_WIDTH_USIZE + x).unwrap() = true;
                                 true
                             } else if below == FieldType::BlackHole {
                                 sand_count -= 1;
@@ -355,7 +356,6 @@ impl Model {
                             // sand has fallen directly down
                             *self.old_grid_buffer.get_mut(x, y).unwrap() = FieldType::Air;
                             *updated.get_mut(bit_field_index).unwrap() = true;
-                            *updated.get_mut(y_below * GRID_WIDTH_USIZE + x).unwrap() = true;
                         } else {
                             for dx in if self.get_random_bit() {
                                 [1, -1]
