@@ -366,13 +366,32 @@ impl Model {
                                     if self.get(curr_x, y) != Some(&FieldType::Air) {
                                         continue; // neighbor is not air
                                     }
-                                    if *updated
-                                        .get_mut(y_below * GRID_WIDTH_USIZE + curr_x)
-                                        .unwrap()
+                                    if updated
+                                        .get_mut(y_below * GRID_WIDTH_USIZE + curr_x).map(|b| *b)
+                                        .unwrap_or(false)
                                     {
-                                        continue; // was already updated
-                                    }
-                                    if let Some(below) = self.get(curr_x, y_below) {
+                                        if updated
+                                            .get_mut(y * GRID_WIDTH_USIZE + curr_x)
+                                            .map(|b| *b)
+                                            .unwrap_or(false) {
+                                            continue;
+                                        }
+                                        if let Some(below) = self.get(curr_x, y_below) {
+                                            if *below == FieldType::Air || *below == FieldType::BlackHole {
+                                                *self
+                                                    .old_grid_buffer
+                                                    .get_mut(curr_x, y)
+                                                    .unwrap() = field_type;
+                                                *updated
+                                                    .get_mut(y * GRID_WIDTH_USIZE + curr_x)
+                                                    .unwrap() = true;
+                                                *self.old_grid_buffer.get_mut(x, y).unwrap() =
+                                                    FieldType::Air;
+                                                *updated.get_mut(bit_field_index).unwrap() = true;
+                                                break;
+                                            }
+                                        }
+                                    } else if let Some(below) = self.get(curr_x, y_below) {
                                         if *below == FieldType::Air {
                                             *self
                                                 .old_grid_buffer
