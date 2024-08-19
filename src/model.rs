@@ -307,6 +307,7 @@ impl Model {
             let y_below = y + 1;
             let revert = self.get_random_bit();
             for x in 0..GRID_WIDTH_USIZE {
+                let x = if revert { GRID_WIDTH_USIZE - 1 - x } else { x };
                 let bit_field_index = y * GRID_WIDTH_USIZE + x;
                 if *updated.get_mut(bit_field_index).unwrap() {
                     continue;
@@ -315,7 +316,6 @@ impl Model {
                     .get(y_below * GRID_WIDTH_USIZE + x)
                     .map(|b| *b)
                     .unwrap_or(false);
-                let x = if revert { GRID_WIDTH_USIZE - 1 - x } else { x };
                 match *self.get(x, y).unwrap() {
                     FieldType::Air => (),
                     FieldType::Wood => (),
