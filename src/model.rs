@@ -5,7 +5,6 @@ use crate::model::constants::{
     GRID_WIDTH_USIZE,
 };
 use crate::spiral_iter::SpiralIter;
-use bitvec::prelude::BitVec;
 use nannou::wgpu;
 use nannou::window::Window;
 use num_traits::FromPrimitive;
@@ -293,7 +292,7 @@ impl Model {
 
     #[inline]
     pub fn update(&mut self) {
-        let mut updated: BitVec = BitVec::repeat(false, FIELD_COUNT);
+        let mut updated: Vec<bool> = vec![false; FIELD_COUNT];
 
         let mut sand_count = self
             .grid
