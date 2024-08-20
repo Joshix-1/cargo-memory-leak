@@ -362,7 +362,8 @@ impl Model {
                                 [-1, 1]
                             } {
                                 if let Some(curr_x) = x.checked_add_signed(dx) {
-                                    if self.get(curr_x, y) != Some(&FieldType::Air) {
+                                    let neighbor = *self.get(curr_x, y).unwrap_or(&FieldType::Air);
+                                    if !(neighbor == FieldType::Air || neighbor.is_sand()) {
                                         continue; // neighbor is not air
                                     }
                                     if updated
@@ -390,7 +391,8 @@ impl Model {
                                                 break;
                                             }
                                         }
-                                    } else if let Some(below) = self.get(curr_x, y_below) {
+                                    } else {
+                                        let below = self.get(curr_x, y_below).unwrap_or(&FieldType::BlackHole);
                                         if *below == FieldType::Air {
                                             *self
                                                 .old_grid_buffer
