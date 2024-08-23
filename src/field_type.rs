@@ -24,8 +24,6 @@ const _: () = assert!(size_of::<FieldType>() == 1);
 const _: () = assert!(size_of::<Option<FieldType>>() == 1);
 
 impl FieldType {
-    const MAX: u8 = FieldType::SandC7 as u8 + 1;
-
     #[inline]
     pub fn sand_from_random_source<R: FnMut() -> bool>(mut get_random_bit: R) -> Self {
         match (get_random_bit(), get_random_bit(), get_random_bit()) {
@@ -72,10 +70,11 @@ impl FieldType {
         }
     }
 
-    pub fn create_texture() -> [u8; Self::MAX as usize * 4] {
-        let mut texture = [69u8; Self::MAX as usize * 4];
+    pub fn create_texture() -> Vec<u8> {
+        let mut length: usize = 0;
+        let mut texture = vec![69u8; u8::MAX as usize * 4];
 
-        for i in 0..Self::MAX {
+        for i in 0..u8::MAX {
             if let Some(field) = FieldType::from_u8(i) {
                 let tidx = i as usize * 4;
 
@@ -84,8 +83,13 @@ impl FieldType {
                 texture[tidx + 1] = g;
                 texture[tidx + 2] = b;
                 texture[tidx + 3] = 255; // a
+
+                length = length.max(tidx + 4);
             }
         }
+
+        texture.truncate(length + 1);
+        texture.shrink_to_fit();
 
         texture
     }
