@@ -19,7 +19,7 @@ use std::slice::SliceIndex;
 use std::{io, slice};
 
 pub mod constants {
-    pub const GRID_HEIGHT: u16 = 150;
+    pub const GRID_HEIGHT: u16 = 5;
     pub const GRID_WIDTH: u16 = (GRID_HEIGHT * 4) / 3;
 
     const _: () = assert!(GRID_WIDTH > GRID_HEIGHT);
@@ -302,6 +302,9 @@ impl Model {
             .count();
 
         *self.old_grid_buffer.as_mut() = *self.grid.as_ref();
+
+        let mut grid_buffer = &mut self.old_grid_buffer;
+
         for y in 0..GRID_HEIGHT_USIZE {
             let y_below = y + 1;
             let revert = self.get_random_bit();
@@ -323,7 +326,7 @@ impl Model {
                         if !below_updated {
                             if let Some(below) = self.get(x, y_below) {
                                 if *below == FieldType::Air {
-                                    *self.old_grid_buffer.get_mut(x, y_below).unwrap() =
+                                    *grid_buffer.get_mut(x, y_below).unwrap() =
                                         FieldType::sand_from_random_source(|| {
                                             self.get_random_bit()
                                         });
@@ -341,7 +344,7 @@ impl Model {
                                 .copied()
                                 .unwrap_or(FieldType::BlackHole);
                             if below == FieldType::Air && !below_updated {
-                                *self.old_grid_buffer.get_mut(x, y_below).unwrap() = field_type;
+                                *grid_buffer.get_mut(x, y_below).unwrap() = field_type;
                                 *updated.get_mut(y_below * GRID_WIDTH_USIZE + x).unwrap() = true;
                                 true
                             } else if below == FieldType::BlackHole {
@@ -353,7 +356,7 @@ impl Model {
                         };
                         if res {
                             // sand has fallen directly down
-                            *self.old_grid_buffer.get_mut(x, y).unwrap() = FieldType::Air;
+                            *grid_buffer.get_mut(x, y).unwrap() = FieldType::Air;
                             *updated.get_mut(bit_field_index).unwrap() = true;
                         } else {
                             for dx in if self.get_random_bit() {
@@ -385,7 +388,7 @@ impl Model {
                                                 *updated
                                                     .get_mut(y * GRID_WIDTH_USIZE + curr_x)
                                                     .unwrap() = true;
-                                                *self.old_grid_buffer.get_mut(x, y).unwrap() =
+                                                *grid_buffer.get_mut(x, y).unwrap() =
                                                     FieldType::Air;
                                                 *updated.get_mut(bit_field_index).unwrap() = true;
                                                 break;
@@ -401,14 +404,14 @@ impl Model {
                                             *updated
                                                 .get_mut(y_below * GRID_WIDTH_USIZE + curr_x)
                                                 .unwrap() = true;
-                                            *self.old_grid_buffer.get_mut(x, y).unwrap() =
+                                            *grid_buffer.get_mut(x, y).unwrap() =
                                                 FieldType::Air;
                                             *updated.get_mut(bit_field_index).unwrap() = true;
                                             break;
                                         }
                                         if *below == FieldType::BlackHole {
                                             sand_count -= 1;
-                                            *self.old_grid_buffer.get_mut(x, y).unwrap() =
+                                            *grid_buffer.get_mut(x, y).unwrap() =
                                                 FieldType::Air;
                                             *updated.get_mut(bit_field_index).unwrap() = true;
                                             break;
@@ -425,14 +428,14 @@ impl Model {
 
         debug_assert_eq!(
             sand_count,
-            self.old_grid_buffer
+            grid_buffer
                 .as_flattened()
                 .iter()
                 .filter(|x| x.is_sand())
                 .count()
         );
 
-        *self.grid.as_mut() = *self.old_grid_buffer;
+        *self.grid.as_mut() = **grid_buffer;
     }
 
     pub(crate) fn resize_window(&mut self, window: Ref<Window>) {
