@@ -45,7 +45,7 @@ impl Iterator for SpiralIter {
                 }
 
                 self.steps_left_in_curr_dir = self.total_steps_in_curr_dir;
-                self.curr_dir = (dy * -1, dx * 1);
+                self.curr_dir = (-dy, dx);
             }
 
             ret_val
@@ -53,7 +53,7 @@ impl Iterator for SpiralIter {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        return (self.items_remaining, Some(self.items_remaining));
+        (self.items_remaining, Some(self.items_remaining))
     }
 }
 

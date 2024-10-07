@@ -23,6 +23,34 @@ pub enum FieldType {
 const _: () = assert!(size_of::<FieldType>() == 1);
 const _: () = assert!(size_of::<Option<FieldType>>() == 1);
 
+#[macro_export]
+macro_rules! sand {
+    () => {
+        FieldType::SandC0
+            | FieldType::SandC1
+            | FieldType::SandC2
+            | FieldType::SandC3
+            | FieldType::SandC4
+            | FieldType::SandC5
+            | FieldType::SandC6
+            | FieldType::SandC7
+    };
+}
+
+#[macro_export]
+macro_rules! not_solid {
+    () => {
+        FieldType::Air
+    };
+}
+
+#[macro_export]
+macro_rules! solid {
+    () => {
+        FieldType::Wood | FieldType::SandSource | sand!()
+    };
+}
+
 impl FieldType {
     #[inline]
     pub fn sand_from_random_source<R: FnMut() -> bool>(mut get_random_bit: R) -> Self {
@@ -39,17 +67,7 @@ impl FieldType {
     }
 
     pub const fn is_sand(self) -> bool {
-        matches!(
-            self,
-            FieldType::SandC0
-                | FieldType::SandC1
-                | FieldType::SandC2
-                | FieldType::SandC3
-                | FieldType::SandC4
-                | FieldType::SandC5
-                | FieldType::SandC6
-                | FieldType::SandC7
-        )
+        matches!(self, sand!())
     }
 
     #[inline]

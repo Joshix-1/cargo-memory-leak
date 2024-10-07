@@ -1,5 +1,6 @@
 mod field_type;
 mod model;
+mod random;
 mod spiral_iter;
 mod wgpu_utils;
 

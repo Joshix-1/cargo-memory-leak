@@ -1,10 +1,11 @@
 use crate::field_type::FieldType;
-use crate::get_cell_size_and_display_rect;
 use crate::model::constants::{
     FIELD_COUNT, GRID_HEIGHT, GRID_HEIGHT_F32, GRID_HEIGHT_USIZE, GRID_WIDTH, GRID_WIDTH_F32,
     GRID_WIDTH_USIZE,
 };
+use crate::random::Random;
 use crate::spiral_iter::SpiralIter;
+use crate::{get_cell_size_and_display_rect, not_solid, sand, solid};
 use nannou::wgpu;
 use nannou::window::Window;
 use num_traits::FromPrimitive;
@@ -15,11 +16,10 @@ use std::io::{Read, Write};
 use std::mem::size_of;
 use std::num::NonZeroU32;
 use std::path::Path;
-use std::slice::SliceIndex;
 use std::{io, slice};
 
 pub mod constants {
-    pub const GRID_HEIGHT: u16 = 5;
+    pub const GRID_HEIGHT: u16 = 250;
     pub const GRID_WIDTH: u16 = (GRID_HEIGHT * 4) / 3;
 
     const _: () = assert!(GRID_WIDTH > GRID_HEIGHT);
@@ -76,53 +76,30 @@ impl GridDisplayData {
     }
 }
 
-trait GridGetValue<Out: std::marker::Copy> {
-    fn get<Y: Into<usize>, X: SliceIndex<[Out]>>(&self, x: X, y: Y) -> Option<&X::Output>;
-
-    fn get_mut<T: Into<usize>>(&mut self, x: T, y: T) -> Option<&mut Out>;
-
-    #[inline]
-    fn get_mut_opt(&mut self, x: Option<usize>, y: Option<usize>) -> Option<&mut Out> {
-        self.get_mut(x?, y?)
-    }
-}
-
-impl GridGetValue<FieldType> for Box<Grid> {
-    #[inline]
-    fn get<Y: Into<usize>, X: SliceIndex<[FieldType]>>(&self, x: X, y: Y) -> Option<&X::Output> {
-        let grid: &Grid = self.as_ref();
-
-        let row: &[FieldType] = grid.get(y.into())?;
-
-        row.get(x)
-    }
-    #[inline]
-    fn get_mut<T: Into<usize>>(&mut self, x: T, y: T) -> Option<&mut FieldType> {
-        let grid: &mut Grid = self.as_mut();
-
-        let row: &mut [FieldType] = grid.get_mut(y.into())?;
-
-        row.get_mut(x.into())
-    }
-}
+type MutFieldPair<'a> = (&'a mut FieldType, &'a mut FieldType);
 
 pub struct Model {
     grid: Box<Grid>,
-    old_grid_buffer: Box<Grid>,
-    state: u32,
+    random: Random,
     pointer_size: NonZeroU32,
     grid_data: GridDisplayData,
+    update_counter: u8,
 }
 
-impl GridGetValue<FieldType> for Model {
-    #[inline]
-    fn get<Y: Into<usize>, X: SliceIndex<[FieldType]>>(&self, x: X, y: Y) -> Option<&X::Output> {
-        self.grid.get(x, y)
-    }
-    #[inline]
-    fn get_mut<T: Into<usize>>(&mut self, x: T, y: T) -> Option<&mut FieldType> {
-        self.grid.get_mut(x, y)
-    }
+#[inline]
+fn get_mut_pair_at<TVal, Idx: Into<usize>>(
+    arr: &mut [TVal],
+    first_index: Idx,
+) -> Option<(&mut TVal, &mut TVal)> {
+    let idx = first_index.into();
+
+    let slice: &mut [TVal] = arr.get_mut(idx..=idx.checked_add(1)?)?;
+
+    let pair: &mut [TVal; 2] = slice.try_into().expect("slice is not of length 2");
+
+    let [ref mut val1, ref mut val2] = pair;
+
+    Some((val1, val2))
 }
 
 impl Default for Model {
@@ -140,10 +117,10 @@ impl Default for Model {
         *grid.last_mut().unwrap() = [FieldType::Wood; GRID_WIDTH_USIZE];
         Model {
             grid: grid.clone(),
-            state: 0xACE1,
+            random: Random::new(0xACE1),
             pointer_size: NonZeroU32::new(1).unwrap(),
             grid_data: Default::default(),
-            old_grid_buffer: grid,
+            update_counter: 0,
         }
     }
 }
@@ -184,13 +161,17 @@ impl Model {
         .unwrap();
         for (dx, dy) in SpiralIter::new(count) {
             if field_type.is_sand() {
-                field_type = FieldType::sand_from_random_source(|| self.get_random_bit());
+                field_type = FieldType::sand_from_random_source(|| self.random.get_random_bit());
             }
 
-            if let Some(field) =
-                self.get_mut_opt(x.checked_add_signed(dx), y.checked_add_signed(dy))
-            {
-                *field = field_type;
+            if let Some(x) = x.checked_add_signed(dx) {
+                if let Some(y) = y.checked_add_signed(dy) {
+                    if let Some(row) = self.grid.get_mut(y) {
+                        if let Some(cell) = row.get_mut(x) {
+                            *cell = field_type;
+                        }
+                    }
+                }
             }
         }
     }
@@ -214,19 +195,6 @@ impl Model {
             NonZeroU32::new(self.pointer_size.get() - 1)?
         };
         Some(())
-    }
-
-    #[inline]
-    pub fn get_random_bit(&mut self) -> bool {
-        // ~1
-        const INV1: u32 = 0u32.wrapping_sub(2);
-        // https://old.reddit.com/r/cryptography/comments/idftm3/having_trouble_understanding_the_fibonacci_lfsr/g294tqu/
-        const TAPS: u32 =
-            (1 << 15) | (1 << 12) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 3) | (1 << 2) | (1 << 1);
-        // https://en.wikipedia.org/wiki/Linear-feedback_shift_register#Fibonacci_LFSRs
-        let bit = (self.state & TAPS).count_ones() & 1u32;
-        self.state = ((self.state & INV1) | bit).rotate_right(1);
-        bit != 0
     }
 
     fn from_bytes(data: &[u8]) -> Self {
@@ -290,152 +258,147 @@ impl Model {
         }
     }
 
-    #[inline]
-    pub fn update(&mut self) {
-        let mut updated: Vec<bool> = vec![false; FIELD_COUNT];
-
-        let mut sand_count = self
-            .grid
+    fn get_sand_count(&self) -> usize {
+        self.grid
             .as_flattened()
             .iter()
             .filter(|x| x.is_sand())
-            .count();
+            .count()
+    }
 
-        *self.old_grid_buffer.as_mut() = *self.grid.as_ref();
+    #[inline]
+    fn get_mut_cell<'a>(
+        &'a mut self,
+        x: usize,
+        y: usize,
+        bottom_row: &'a mut [FieldType; GRID_WIDTH_USIZE],
+    ) -> Option<(MutFieldPair, MutFieldPair)> {
+        if y.checked_add(1) == Some(self.grid.len()) {
+            let row1 = self.grid.get_mut(y)?;
+            let row2 = bottom_row;
+            Some((get_mut_pair_at(row1, x)?, get_mut_pair_at(row2, x)?))
+        } else {
+            let (row1, row2) = get_mut_pair_at(self.grid.as_mut(), y)?;
+            Some((get_mut_pair_at(row1, x)?, get_mut_pair_at(row2, x)?))
+        }
+    }
 
-        let mut grid_buffer = &mut self.old_grid_buffer;
+    #[inline]
+    pub fn update(&mut self) {
+        let mut random: Random = self.random;
+        let mut sand_count = self.get_sand_count();
 
-        for y in 0..GRID_HEIGHT_USIZE {
-            let y_below = y + 1;
-            let revert = self.get_random_bit();
-            for x in 0..GRID_WIDTH_USIZE {
-                let x = if revert { GRID_WIDTH_USIZE - 1 - x } else { x };
-                let bit_field_index = y * GRID_WIDTH_USIZE + x;
-                if *updated.get_mut(bit_field_index).unwrap() {
-                    continue;
+        let x_start = if random.get_random_bit() { 1 } else { 0 };
+        let y_start = if random.get_random_bit() { 1 } else { 0 };
+
+        let bottom_row: &mut [FieldType; GRID_WIDTH_USIZE] =
+            &mut [FieldType::BlackHole; GRID_WIDTH_USIZE];
+
+        for x in (x_start..GRID_WIDTH_USIZE - 1).step_by(2) {
+            for y in (y_start..GRID_HEIGHT_USIZE).step_by(2) {
+                if let Some(cell) = self.get_mut_cell(x, y, bottom_row) {
+                    match cell {
+                        (
+                            (FieldType::SandSource, FieldType::SandSource),
+                            (unsolid0 @ not_solid!(), unsolid1 @ not_solid!()),
+                        ) => {
+                            sand_count += 2;
+                            *unsolid1 =
+                                FieldType::sand_from_random_source(|| random.get_random_bit());
+                            *unsolid0 =
+                                FieldType::sand_from_random_source(|| random.get_random_bit());
+                        }
+                        (
+                            (FieldType::SandSource, sand @ sand!()),
+                            (unsolid0 @ not_solid!(), unsolid1 @ not_solid!()),
+                        ) => {
+                            (*sand, *unsolid1) = (*unsolid1, *sand);
+                            sand_count += 1;
+                            *unsolid0 =
+                                FieldType::sand_from_random_source(|| random.get_random_bit())
+                        }
+                        (
+                            (sand @ sand!(), FieldType::SandSource),
+                            (unsolid0 @ not_solid!(), unsolid1 @ not_solid!()),
+                        ) => {
+                            (*sand, *unsolid0) = (*unsolid0, *sand);
+                            sand_count += 1;
+                            *unsolid1 =
+                                FieldType::sand_from_random_source(|| random.get_random_bit())
+                        }
+                        (
+                            (sand0 @ sand!(), sand1 @ sand!()),
+                            (unsolid0 @ not_solid!(), unsolid1 @ not_solid!()),
+                        ) => {
+                            (*sand0, *unsolid0) = (*unsolid0, *sand0);
+                            (*sand1, *unsolid1) = (*unsolid1, *sand1);
+                        }
+                        (
+                            (sand0 @ sand!(), sand1 @ sand!()),
+                            (FieldType::BlackHole, FieldType::BlackHole),
+                        ) => {
+                            *sand0 = FieldType::Air;
+                            *sand1 = FieldType::Air;
+                            sand_count -= 2;
+                        }
+                        (
+                            (sand @ sand!(), not_solid!()),
+                            (unsolid @ not_solid!(), not_solid!()),
+                        ) => (*sand, *unsolid) = (*unsolid, *sand),
+                        (
+                            (not_solid!(), sand @ sand!()),
+                            (not_solid!(), unsolid @ not_solid!()),
+                        ) => (*sand, *unsolid) = (*unsolid, *sand),
+                        (
+                            (not_solid!() | sand!(), sand @ sand!()),
+                            (unsolid @ not_solid!(), solid!()),
+                        ) => (*sand, *unsolid) = (*unsolid, *sand),
+                        (
+                            (sand @ sand!(), not_solid!() | sand!()),
+                            (solid!(), unsolid @ not_solid!()),
+                        ) => (*sand, *unsolid) = (*unsolid, *sand),
+                        ((FieldType::SandSource, _), (unsolid @ not_solid!(), _)) => {
+                            sand_count += 1;
+                            *unsolid =
+                                FieldType::sand_from_random_source(|| random.get_random_bit())
+                        }
+                        ((_, FieldType::SandSource), (_, unsolid @ not_solid!())) => {
+                            sand_count += 1;
+                            *unsolid =
+                                FieldType::sand_from_random_source(|| random.get_random_bit())
+                        }
+                        ((sand @ sand!(), _), (FieldType::BlackHole, _)) => {
+                            *sand = FieldType::Air;
+                            sand_count -= 1;
+                        }
+                        ((_, sand @ sand!()), (_, FieldType::BlackHole)) => {
+                            *sand = FieldType::Air;
+                            sand_count -= 1;
+                        }
+                        ((sand @ sand!(), _), (unsolid @ not_solid!(), _)) => {
+                            (*sand, *unsolid) = (*unsolid, *sand)
+                        }
+                        ((_, sand @ sand!()), (_, unsolid @ not_solid!())) => {
+                            (*sand, *unsolid) = (*unsolid, *sand)
+                        }
+                        _ => {}
+                    }
+                } else {
+                    #[cfg(debug_assertions)]
+                    panic!(
+                        "Failed to get cell at ({x}, {y}) with field {GRID_WIDTH}x{GRID_HEIGHT}"
+                    );
                 }
-                let below_updated: bool = updated
-                    .get(y_below * GRID_WIDTH_USIZE + x)
-                    .map(|b| *b)
-                    .unwrap_or(false);
-                match *self.get(x, y).unwrap() {
-                    FieldType::Air => (),
-                    FieldType::Wood => (),
-                    FieldType::BlackHole => (),
-                    FieldType::SandSource => {
-                        if !below_updated {
-                            if let Some(below) = self.get(x, y_below) {
-                                if *below == FieldType::Air {
-                                    *grid_buffer.get_mut(x, y_below).unwrap() =
-                                        FieldType::sand_from_random_source(|| {
-                                            self.get_random_bit()
-                                        });
-                                    sand_count += 1;
-                                    *updated.get_mut(y_below * GRID_WIDTH_USIZE + x).unwrap() =
-                                        true;
-                                }
-                            }
-                        }
-                    }
-                    field_type if field_type.is_sand() => {
-                        let res = {
-                            let below: FieldType = self
-                                .get(x, y_below)
-                                .copied()
-                                .unwrap_or(FieldType::BlackHole);
-                            if below == FieldType::Air && !below_updated {
-                                *grid_buffer.get_mut(x, y_below).unwrap() = field_type;
-                                *updated.get_mut(y_below * GRID_WIDTH_USIZE + x).unwrap() = true;
-                                true
-                            } else if below == FieldType::BlackHole {
-                                sand_count -= 1;
-                                true
-                            } else {
-                                false
-                            }
-                        };
-                        if res {
-                            // sand has fallen directly down
-                            *grid_buffer.get_mut(x, y).unwrap() = FieldType::Air;
-                            *updated.get_mut(bit_field_index).unwrap() = true;
-                        } else {
-                            for dx in if self.get_random_bit() {
-                                [1, -1]
-                            } else {
-                                [-1, 1]
-                            } {
-                                if let Some(curr_x) = x.checked_add_signed(dx) {
-                                    let neighbor = *self.get(curr_x, y).unwrap_or(&FieldType::Air);
-                                    if !(neighbor == FieldType::Air || neighbor.is_sand()) {
-                                        continue; // neighbor is not air
-                                    }
-                                    if updated
-                                        .get_mut(y_below * GRID_WIDTH_USIZE + curr_x).map(|b| *b)
-                                        .unwrap_or(false)
-                                    {
-                                        if updated
-                                            .get_mut(y * GRID_WIDTH_USIZE + curr_x)
-                                            .map(|b| *b)
-                                            .unwrap_or(false) {
-                                            continue;
-                                        }
-                                        if let Some(below) = self.get(curr_x, y_below) {
-                                            if *below == FieldType::Air || *below == FieldType::BlackHole {
-                                                *self
-                                                    .old_grid_buffer
-                                                    .get_mut(curr_x, y)
-                                                    .unwrap() = field_type;
-                                                *updated
-                                                    .get_mut(y * GRID_WIDTH_USIZE + curr_x)
-                                                    .unwrap() = true;
-                                                *grid_buffer.get_mut(x, y).unwrap() =
-                                                    FieldType::Air;
-                                                *updated.get_mut(bit_field_index).unwrap() = true;
-                                                break;
-                                            }
-                                        }
-                                    } else {
-                                        let below = self.get(curr_x, y_below).unwrap_or(&FieldType::BlackHole);
-                                        if *below == FieldType::Air {
-                                            *self
-                                                .old_grid_buffer
-                                                .get_mut(curr_x, y_below)
-                                                .unwrap() = field_type;
-                                            *updated
-                                                .get_mut(y_below * GRID_WIDTH_USIZE + curr_x)
-                                                .unwrap() = true;
-                                            *grid_buffer.get_mut(x, y).unwrap() =
-                                                FieldType::Air;
-                                            *updated.get_mut(bit_field_index).unwrap() = true;
-                                            break;
-                                        }
-                                        if *below == FieldType::BlackHole {
-                                            sand_count -= 1;
-                                            *grid_buffer.get_mut(x, y).unwrap() =
-                                                FieldType::Air;
-                                            *updated.get_mut(bit_field_index).unwrap() = true;
-                                            break;
-                                        }
-                                    }
-                                };
-                            }
-                        }
-                    }
-                    field_type => panic!("Invalid FieldType {field_type:?}"),
-                };
             }
         }
 
-        debug_assert_eq!(
-            sand_count,
-            grid_buffer
-                .as_flattened()
-                .iter()
-                .filter(|x| x.is_sand())
-                .count()
-        );
+        debug_assert_eq!(sand_count, self.get_sand_count());
+        debug_assert!(bottom_row
+            .iter()
+            .all(|&field| field == FieldType::BlackHole));
 
-        *self.grid.as_mut() = **grid_buffer;
+        self.update_counter = self.update_counter.wrapping_add(1);
+        self.random = random;
     }
 
     pub(crate) fn resize_window(&mut self, window: Ref<Window>) {
