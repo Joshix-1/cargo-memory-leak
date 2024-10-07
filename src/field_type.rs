@@ -67,16 +67,16 @@ macro_rules! falls {
 }
 
 #[macro_export]
-macro_rules! not_solid {
+macro_rules! not_solid_not_water {
     () => {
-        crate::FieldType::Air | crate::water!()
+        crate::FieldType::Air
     };
 }
 
 #[macro_export]
-macro_rules! not_solid_not_water {
+macro_rules! not_solid {
     () => {
-        crate::FieldType::Air
+        crate::not_solid_no_water!() | crate::water!()
     };
 }
 
