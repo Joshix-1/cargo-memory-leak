@@ -76,7 +76,7 @@ macro_rules! not_solid_not_water {
 #[macro_export]
 macro_rules! not_solid {
     () => {
-        crate::not_solid_no_water!() | crate::water!()
+        crate::not_solid_not_water!() | crate::water!()
     };
 }
 
