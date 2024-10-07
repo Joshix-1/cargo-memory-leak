@@ -83,7 +83,6 @@ pub struct Model {
     random: Random,
     pointer_size: NonZeroU32,
     grid_data: GridDisplayData,
-    update_counter: u8,
 }
 
 #[inline]
@@ -120,7 +119,6 @@ impl Default for Model {
             random: Random::new(0xACE1),
             pointer_size: NonZeroU32::new(1).unwrap(),
             grid_data: Default::default(),
-            update_counter: 0,
         }
     }
 }
@@ -397,7 +395,6 @@ impl Model {
             .iter()
             .all(|&field| field == FieldType::BlackHole));
 
-        self.update_counter = self.update_counter.wrapping_add(1);
         self.random = random;
     }
 
