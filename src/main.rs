@@ -185,6 +185,8 @@ fn handle_mouse_interaction(app: &App, model: &mut Model) {
         FieldType::SandSource
     } else if app.keys.down.contains(&VirtualKeyCode::B) {
         FieldType::BlackHole
+    } else if app.keys.down.contains(&VirtualKeyCode::V) {
+        FieldType::WaterC0
     } else {
         return;
     };

@@ -5,7 +5,7 @@ use crate::model::constants::{
 };
 use crate::random::Random;
 use crate::spiral_iter::SpiralIter;
-use crate::{get_cell_size_and_display_rect, not_solid, sand, solid};
+use crate::{falls, get_cell_size_and_display_rect, not_solid, not_solid_not_water, sand, solid};
 use nannou::wgpu;
 use nannou::window::Window;
 use num_traits::FromPrimitive;
@@ -160,6 +160,8 @@ impl Model {
         for (dx, dy) in SpiralIter::new(count) {
             if field_type.is_sand() {
                 field_type = FieldType::sand_from_random_source(|| self.random.get_random_bit());
+            } else if field_type.is_water() {
+                field_type = FieldType::water_from_random_source(|| self.random.get_random_bit());
             }
 
             if let Some(x) = x.checked_add_signed(dx) {
@@ -307,52 +309,63 @@ impl Model {
                                 FieldType::sand_from_random_source(|| random.get_random_bit());
                         }
                         (
-                            (FieldType::SandSource, sand @ sand!()),
+                            (FieldType::SandSource, sand @ falls!()),
                             (unsolid0 @ not_solid!(), unsolid1 @ not_solid!()),
-                        ) => {
+                        ) if unsolid1.is_water() != sand.is_water() => {
                             (*sand, *unsolid1) = (*unsolid1, *sand);
                             sand_count += 1;
                             *unsolid0 =
                                 FieldType::sand_from_random_source(|| random.get_random_bit())
                         }
                         (
-                            (sand @ sand!(), FieldType::SandSource),
+                            (sand @ falls!(), FieldType::SandSource),
                             (unsolid0 @ not_solid!(), unsolid1 @ not_solid!()),
-                        ) => {
+                        ) if unsolid0.is_water() != sand.is_water() => {
                             (*sand, *unsolid0) = (*unsolid0, *sand);
                             sand_count += 1;
                             *unsolid1 =
                                 FieldType::sand_from_random_source(|| random.get_random_bit())
                         }
                         (
-                            (sand0 @ sand!(), sand1 @ sand!()),
+                            (sand0 @ falls!(), sand1 @ falls!()),
                             (unsolid0 @ not_solid!(), unsolid1 @ not_solid!()),
-                        ) => {
-                            (*sand0, *unsolid0) = (*unsolid0, *sand0);
-                            (*sand1, *unsolid1) = (*unsolid1, *sand1);
+                        ) if unsolid0.is_water() != sand0.is_water()
+                            || unsolid1.is_water() != sand1.is_water() =>
+                        {
+                            if unsolid0.is_water() != sand0.is_water() {
+                                (*sand0, *unsolid0) = (*unsolid0, *sand0);
+                            }
+                            if unsolid1.is_water() != sand1.is_water() {
+                                (*sand1, *unsolid1) = (*unsolid1, *sand1);
+                            }
                         }
                         (
-                            (sand0 @ sand!(), sand1 @ sand!()),
+                            (sand0 @ falls!(), sand1 @ falls!()),
                             (FieldType::BlackHole, FieldType::BlackHole),
                         ) => {
+                            if sand0.is_sand() {
+                                sand_count -= 1;
+                            };
+                            if sand1.is_sand() {
+                                sand_count -= 1;
+                            };
                             *sand0 = FieldType::Air;
                             *sand1 = FieldType::Air;
-                            sand_count -= 2;
                         }
                         (
-                            (sand @ sand!(), not_solid!()),
+                            (sand @ falls!(), not_solid_not_water!()),
                             (unsolid @ not_solid!(), not_solid!()),
                         ) => (*sand, *unsolid) = (*unsolid, *sand),
                         (
-                            (not_solid!(), sand @ sand!()),
+                            (not_solid_not_water!(), sand @ falls!()),
                             (not_solid!(), unsolid @ not_solid!()),
                         ) => (*sand, *unsolid) = (*unsolid, *sand),
                         (
-                            (not_solid!() | sand!(), sand @ sand!()),
+                            (not_solid_not_water!() | falls!(), sand @ falls!()),
                             (unsolid @ not_solid!(), solid!()),
                         ) => (*sand, *unsolid) = (*unsolid, *sand),
                         (
-                            (sand @ sand!(), not_solid!() | sand!()),
+                            (sand @ falls!(), not_solid_not_water!() | falls!()),
                             (solid!(), unsolid @ not_solid!()),
                         ) => (*sand, *unsolid) = (*unsolid, *sand),
                         ((FieldType::SandSource, _), (unsolid @ not_solid!(), _)) => {
@@ -365,18 +378,22 @@ impl Model {
                             *unsolid =
                                 FieldType::sand_from_random_source(|| random.get_random_bit())
                         }
-                        ((sand @ sand!(), _), (FieldType::BlackHole, _)) => {
+                        ((sand @ falls!(), _), (FieldType::BlackHole, _)) => {
                             *sand = FieldType::Air;
-                            sand_count -= 1;
+                            if sand.is_sand() {
+                                sand_count -= 1;
+                            }
                         }
-                        ((_, sand @ sand!()), (_, FieldType::BlackHole)) => {
+                        ((_, sand @ falls!()), (_, FieldType::BlackHole)) => {
                             *sand = FieldType::Air;
-                            sand_count -= 1;
+                            if sand.is_sand() {
+                                sand_count -= 1;
+                            }
                         }
-                        ((sand @ sand!(), _), (unsolid @ not_solid!(), _)) => {
+                        ((sand @ falls!(), _), (unsolid @ not_solid!(), _)) => {
                             (*sand, *unsolid) = (*unsolid, *sand)
                         }
-                        ((_, sand @ sand!()), (_, unsolid @ not_solid!())) => {
+                        ((_, sand @ falls!()), (_, unsolid @ not_solid!())) => {
                             (*sand, *unsolid) = (*unsolid, *sand)
                         }
                         _ => {}
