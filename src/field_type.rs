@@ -1,8 +1,4 @@
-use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
-use std::mem::size_of;
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Default, FromPrimitive)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Default)]
 #[repr(u8)]
 pub enum FieldType {
     #[default]
@@ -89,31 +85,13 @@ macro_rules! solid {
 
 impl FieldType {
     #[inline]
-    pub fn sand_from_random_source<R: FnMut() -> bool>(mut get_random_bit: R) -> Self {
-        match (get_random_bit(), get_random_bit(), get_random_bit()) {
-            (false, false, false) => FieldType::SandC0,
-            (false, false, true) => FieldType::SandC1,
-            (false, true, false) => FieldType::SandC2,
-            (false, true, true) => FieldType::SandC3,
-            (true, false, false) => FieldType::SandC4,
-            (true, false, true) => FieldType::SandC5,
-            (true, true, false) => FieldType::SandC6,
-            (true, true, true) => FieldType::SandC7,
-        }
+    pub fn sand_from_random_source() -> Self {
+        FieldType::SandC0
     }
 
     #[inline]
-    pub fn water_from_random_source<R: FnMut() -> bool>(mut get_random_bit: R) -> Self {
-        match (get_random_bit(), get_random_bit(), get_random_bit()) {
-            (false, false, false) => FieldType::WaterC0,
-            (false, false, true) => FieldType::WaterC1,
-            (false, true, false) => FieldType::WaterC2,
-            (false, true, true) => FieldType::WaterC3,
-            (true, false, false) => FieldType::WaterC4,
-            (true, false, true) => FieldType::WaterC5,
-            (true, true, false) => FieldType::WaterC6,
-            (true, true, true) => FieldType::WaterC7,
-        }
+    pub fn water_from_random_source() -> Self {
+        FieldType::WaterC0
     }
 
     pub const fn is_sand(self) -> bool {
@@ -148,29 +126,5 @@ impl FieldType {
             FieldType::WaterC6 => (0x55, 0x88, 0xEE),
             FieldType::WaterC7 => (0x1A, 0x74, 0xA1),
         }
-    }
-
-    pub fn create_texture() -> Vec<u8> {
-        let mut length: usize = 0;
-        let mut texture = vec![69u8; u8::MAX as usize * 4];
-
-        for i in 0..u8::MAX {
-            if let Some(field) = FieldType::from_u8(i) {
-                let tidx = i as usize * 4;
-
-                let (r, g, b) = field.get_colour();
-                texture[tidx] = r;
-                texture[tidx + 1] = g;
-                texture[tidx + 2] = b;
-                texture[tidx + 3] = 255; // a
-
-                length = length.max(tidx + 4);
-            }
-        }
-
-        texture.truncate(length + 1);
-        texture.shrink_to_fit();
-
-        texture
     }
 }

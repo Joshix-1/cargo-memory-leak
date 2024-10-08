@@ -22,7 +22,3 @@ overflow-checks = true
 overflow-checks = false
 
 [dependencies]
-nannou =  { version = "0.19.0", default-features = false }
-num-derive = "0.4.2"
-num-traits = "0.2.19"
-wgpu-types = "0.17.0"
