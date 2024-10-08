@@ -14,22 +14,22 @@ fn main() {
             (FieldType::SandSource, FieldType::SandSource),
             (unsolid0 @ not_solid!(), unsolid1 @ not_solid!()),
         ) => {
-            *unsolid1 = FieldType::sand_from_random_source();
-            *unsolid0 = FieldType::sand_from_random_source();
+            *unsolid1 = FieldType::SandC0;
+            *unsolid0 = FieldType::SandC1;
         }
         (
             (FieldType::SandSource, sand @ falls!()),
             (unsolid0 @ not_solid!(), unsolid1 @ not_solid!()),
         ) if unsolid1.is_water() != sand.is_water() => {
             (*sand, *unsolid1) = (*unsolid1, *sand);
-            *unsolid0 = FieldType::sand_from_random_source()
+            *unsolid0 = FieldType::SandC2
         }
         (
             (sand @ falls!(), FieldType::SandSource),
             (unsolid0 @ not_solid!(), unsolid1 @ not_solid!()),
         ) if unsolid0.is_water() != sand.is_water() => {
             (*sand, *unsolid0) = (*unsolid0, *sand);
-            *unsolid1 = FieldType::sand_from_random_source()
+            *unsolid1 = FieldType::SandC3
         }
         (
             (sand0 @ falls!(), sand1 @ falls!()),
@@ -61,10 +61,10 @@ fn main() {
             (solid!(), unsolid @ not_solid!()),
         ) => (*sand, *unsolid) = (*unsolid, *sand),
         ((FieldType::SandSource, _), (unsolid @ not_solid!(), _)) => {
-            *unsolid = FieldType::sand_from_random_source()
+            *unsolid = FieldType::SandC5
         }
         ((_, FieldType::SandSource), (_, unsolid @ not_solid!())) => {
-            *unsolid = FieldType::sand_from_random_source()
+            *unsolid = FieldType::SandC6
         }
         ((sand @ falls!(), _), (FieldType::BlackHole, _)) => {
             *sand = FieldType::Air;
